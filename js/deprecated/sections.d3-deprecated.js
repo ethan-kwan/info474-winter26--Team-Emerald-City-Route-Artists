@@ -1,3 +1,6 @@
+/* DEPRECATED: This file depends on D3 and has been moved to js/deprecated for reference only.
+   The live project now uses a p5-based visualization and a vanilla JS scroller (`js/sections_p5.js`).
+   Do not include this file in the active site. */
 
 /**
  * scrollVis - encapsulates
@@ -765,10 +768,11 @@ var scrollVis = function () {
 function display(data) {
   // create a new plot and
   // display it
-  var plot = scrollVis();
-  d3.select('#vis')
-    .datum(data)
-    .call(plot);
+  // initialize p5 renderer with same data
+  if (window.startP5) {
+    // data is an array of objects; pass it to p5 initializer
+    window.startP5(data);
+  }
 
   // setup scroll functionality
   var scroll = scroller()
@@ -782,13 +786,13 @@ function display(data) {
     // highlight current step text
     d3.selectAll('.step')
       .style('opacity', function (d, i) { return i === index ? 1 : 0.1; });
-
-    // activate current section
-    plot.activate(index);
+    // update p5 state
+    window.p5State.activeIndex = index;
   });
 
   scroll.on('progress', function (index, progress) {
-    plot.update(index, progress);
+    // forward progress to p5 state
+    window.p5State.progress = progress;
   });
 }
 

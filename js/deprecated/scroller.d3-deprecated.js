@@ -1,3 +1,6 @@
+/* DEPRECATED: This file depends on D3 and has been moved to js/deprecated for reference only.
+   The live project now uses a vanilla JS scroller implementation (`js/sections_p5.js`).
+   Do not include this file in the active site. */
 
 /**
  * scroller - handles the details
@@ -132,3 +135,5 @@ function scroller() {
 
   return scroll;
 }
+
+

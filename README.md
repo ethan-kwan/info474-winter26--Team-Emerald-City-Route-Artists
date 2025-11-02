@@ -1,13 +1,11 @@
-## D3 Scrollytelling Demo
 
-Example code of how you might make a basic scrollytelling site using [D3](https://d3js.org/).
+## Scrollytelling demo (D3 deprecated)
 
-[Demo Here](http://vallandingham.me/scroll_demo/).
+This repository originally used D3 for rendering and scroll interactions. The project has been refactored to remove D3 from the runtime and now uses a p5-based renderer and vanilla JavaScript for scrolling (`js/sections_p5.js`).
 
-This code has been **updated to use D3v4**.
+If you need to inspect the original D3-based sources, they have been moved to `js/deprecated/` for reference.
 
-If you are looking for the old D3v3 code, check out the [old-d3v3 branch](https://github.com/vlandham/scroll_demo/tree/old-d3v3) of this repository.
+Demo (original): http://vallandingham.me/scroll_demo/
 
-Originally, this code was part of a talk given at [OpenVis Conf](http://openvisconf.com/) about scrollytelling.
+If you are looking for the older D3v3 code, check the `old-d3v3` branch on the original upstream repository.
 
-[Check out the talk and additional materials!](http://vallandingham.me/think_you_can_scroll.html)
