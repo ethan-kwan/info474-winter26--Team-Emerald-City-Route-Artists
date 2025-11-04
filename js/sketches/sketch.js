@@ -14,8 +14,8 @@ function startP5(rawData) {
         // drawing state
         this.state = { activeIndex: 0, progress: 0 };
 
-        // data will be attached by GridRenderer.setData(manager, data)
-        this.data = [];
+    // data will be attached by Renderer.setData(manager, data)
+    this.data = [];
 
         // create the p5 instance bound to this manager
         var self = this;
@@ -44,12 +44,12 @@ function startP5(rawData) {
         if (s.progress !== undefined) this.state.progress = s.progress;
     };
 
-    // delegate data handling to GridRenderer
+    // delegate data handling to Renderer
     SketchManager.prototype.setData = function (newData) {
-        if (!window.GridRenderer || typeof window.GridRenderer.setData !== 'function') {
-            throw new Error('GridRenderer.setData(manager, data) is required but not found. Ensure js/sketches/sketch_grid.js is loaded before sketch.js.');
+        if (!window.Renderer || typeof window.Renderer.setData !== 'function') {
+            throw new Error('Renderer.setData(manager, data) is required but not found. Ensure js/sketches/sketch_grid.js is loaded before sketch.js.');
         }
-        window.GridRenderer.setData(this, newData);
+        window.Renderer.setData(this, newData);
     };
 
     // simple drawing routine, split into helpers for clarity
@@ -57,13 +57,13 @@ function startP5(rawData) {
         var ai = this.state.activeIndex || 0;
         var progress = this.state.progress || 0;
 
-        // Require GridRenderer to be present. Fail fast if missing so missing
+        // Require Renderer to be present. Fail fast if missing so missing
         // modules are obvious during development.
-        if (!window.GridRenderer || typeof window.GridRenderer.draw !== 'function') {
-            throw new Error('GridRenderer.draw is required but not found. Ensure js/sketches/sketch_grid.js is loaded before sketch.js.');
+        if (!window.Renderer || typeof window.Renderer.draw !== 'function') {
+            throw new Error('Renderer.draw is required but not found. Ensure js/sketches/sketch_grid.js is loaded before sketch.js.');
         }
 
-        window.GridRenderer.draw(p, this, ai, progress);
+        window.Renderer.draw(p, this, ai, progress);
     };
 
     // create (or replace) singleton manager and expose API
@@ -72,11 +72,11 @@ function startP5(rawData) {
         window.__sketchAPI = null;
     }
     var manager = new SketchManager();
-    // initialize data via GridRenderer (fail fast if missing)
-    if (!window.GridRenderer || typeof window.GridRenderer.setData !== 'function') {
-        throw new Error('GridRenderer.setData is required at startup. Ensure js/sketches/sketch_grid.js is loaded before sketch.js.');
+    // initialize data via Renderer (fail fast if missing)
+    if (!window.Renderer || typeof window.Renderer.setData !== 'function') {
+        throw new Error('Renderer.setData is required at startup. Ensure js/sketches/sketch_grid.js is loaded before sketch.js.');
     }
-    window.GridRenderer.setData(manager, rawData || []);
+    window.Renderer.setData(manager, rawData || []);
 
     var api = {
         setState: manager.setState.bind(manager),

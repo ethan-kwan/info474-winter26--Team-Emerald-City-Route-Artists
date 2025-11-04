@@ -1,11 +1,11 @@
 // sketch_grid.js
 // Responsible for rendering the main words grid and filler-related highlights
 (function () {
-    window.GridRenderer = {
+    window.Renderer = {
         // setData: preprocess raw data and compute layout positions on the manager
         setData: function (manager, rawData) {
             if (!window.DataLoader || typeof window.DataLoader.preprocess !== 'function') {
-                throw new Error('DataLoader.preprocess is required by GridRenderer.setData. Ensure js/helpers/data_loader.js is loaded.');
+                throw new Error('DataLoader.preprocess is required by Renderer.setData. Ensure js/helpers/data_loader.js is loaded.');
             }
             var data = window.DataLoader.preprocess(rawData || []);
             manager.data = data;
@@ -30,7 +30,7 @@
         },
 
         draw: function (p, manager, ai, progress) {
-            try { console.log('GridRenderer: drawing title, ai=', ai); } catch (e) { }
+            try { console.log('Renderer: drawing title, ai=', ai); } catch (e) { }
 
             // Handle title screens for early steps (keep titles in same sketch file)
             if (ai === 0 || ai === 1) {
