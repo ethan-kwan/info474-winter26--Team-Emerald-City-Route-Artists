@@ -49,11 +49,30 @@
                 try {
                     console.log('sections: calling startP5 (attempts left)', attempts);
                     var api = startP5();
-                    if (api && api.setState) {
-                        window.__sketchAPI = api;
+
+                    // If the returned API exposes a `ready` promise, wait for it
+                    // to resolve before exposing the API globally. This ensures
+                    // consumers of `window.__sketchAPI` see the populated data.
+                    if (api && api.ready && typeof api.ready.then === 'function') {
+                        api.ready.then(function () {
+                            try {
+                                if (api && api.setState) window.__sketchAPI = api;
+                                window.__sections_startCalled = true;
+                                console.log('sections: startP5 ready and api exposed');
+                            } catch (e) {
+                                console.error('sections: error exposing api after ready', e);
+                            }
+                        }).catch(function (err) {
+                            console.error('sections: startP5 ready promise rejected', err);
+                            if (api && api.setState) window.__sketchAPI = api;
+                        });
+                    } else {
+                        if (api && api.setState) {
+                            window.__sketchAPI = api;
+                        }
+                        window.__sections_startCalled = true;
+                        console.log('sections: startP5 invoked successfully');
                     }
-                    window.__sections_startCalled = true;
-                    console.log('sections: startP5 invoked successfully');
 
                     // Create scroller and wire up events (using configured selectors)
                     var ScrollerCtor = window.Scroller;

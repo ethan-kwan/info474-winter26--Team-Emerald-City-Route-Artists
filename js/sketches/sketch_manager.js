@@ -49,7 +49,7 @@ function startP5(rawData) {
         if (!window.Renderer || typeof window.Renderer.setData !== 'function') {
             throw new Error('Renderer.setData(manager, data) is required but not found. Ensure js/sketches/sketch_grid.js is loaded before sketch_manager.js.');
         }
-        window.Renderer.setData(this, newData);
+        return window.Renderer.setData(this, newData);
     };
 
     // simple drawing routine, split into helpers for clarity
@@ -60,7 +60,7 @@ function startP5(rawData) {
         // Require Renderer to be present. Fail fast if missing so missing
         // modules are obvious during development.
         if (!window.Renderer || typeof window.Renderer.draw !== 'function') {
-            throw new Error('Renderer.draw is required but not found. Ensure js/sketches/sketch_grid.js is loaded before sketch.js.');
+            throw new Error('Renderer.draw is required but not found. Ensure js/sketches/sketch_grid.js is loaded before sketch_manager.js.');
         }
 
         window.Renderer.draw(p, this, ai, progress);
@@ -76,7 +76,7 @@ function startP5(rawData) {
     if (!window.Renderer || typeof window.Renderer.setData !== 'function') {
         throw new Error('Renderer.setData is required at startup. Ensure js/sketches/sketch_grid.js is loaded before sketch_manager.js.');
     }
-    window.Renderer.setData(manager, rawData || []);
+    var setDataResult = window.Renderer.setData(manager, rawData || []);
 
     var api = {
         setState: manager.setState.bind(manager),
@@ -84,6 +84,21 @@ function startP5(rawData) {
         p5: manager.p5,
         data: manager.data
     };
-    window.__sketchAPI = api;
+
+    // Expose a `ready` promise so callers can wait until data/layout are ready.
+    if (setDataResult && typeof setDataResult.then === 'function') {
+        api.ready = setDataResult.then(function () { return api; });
+    } else {
+        api.ready = Promise.resolve(api);
+    }
+
+    // Expose the API globally once ready so consumers (like sections) see
+    // the populated data without racing the async load.
+    api.ready.then(function () {
+        try { window.__sketchAPI = api; } catch (e) { }
+    }).catch(function () {
+        try { window.__sketchAPI = api; } catch (e) { }
+    });
+
     return api;
 }
