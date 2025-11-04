@@ -1,6 +1,6 @@
 // sketch_renderer.js
 
-// Responsible for rendering the main words grid and filler-related highlights
+// Responsible for rendering the main visualization based on the current active index
 (function () {
     window.Renderer = {
 
