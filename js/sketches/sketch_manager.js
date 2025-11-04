@@ -3,8 +3,8 @@
 function startP5() {
 
     var localRenderer;
-    localRenderer = window.TemplateRenderer;
-    // localRenderer = window.Renderer;
+    // localRenderer = window.TemplateRenderer;
+    localRenderer = window.Renderer;
 
     // --- Sketch manager ----------------------------------------------------
     function SketchManager() {
