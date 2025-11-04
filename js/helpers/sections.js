@@ -96,20 +96,41 @@
                             el.style.opacity = (i === index) ? '1' : '0.1';
                         });
 
-                        // update sketch state via returned API if available
+                        // Determine if the active step defines a custom active-index
+                        var mappedIndex = index;
+                        try {
+                            var stepEl = (sc.steps && sc.steps[index]) ? sc.steps[index] : document.querySelectorAll(cfg.stepSelector)[index];
+                            if (stepEl && stepEl.dataset && stepEl.dataset.activeIndex !== undefined) {
+                                var parsed = parseInt(stepEl.dataset.activeIndex, 10);
+                                if (!isNaN(parsed)) mappedIndex = parsed;
+                            }
+                        } catch (e) { /* ignore and fall back to raw index */ }
+
+                        // update sketch state via returned API if available (use mappedIndex)
                         if (window.__sketchAPI && window.__sketchAPI.setState) {
-                            window.__sketchAPI.setState({ activeIndex: index });
+                            window.__sketchAPI.setState({ activeIndex: mappedIndex });
                         }
 
-                        // let visual controller decide whether to show/hide
-                        if (visualController) visualController.handleActive(index);
+                        // let visual controller decide whether to show/hide (give it the mapped index)
+                        if (visualController) visualController.handleActive(mappedIndex);
                     });
 
                     sc.on('progress', function (index, progress) {
+                        // Map index to any per-section activeIndex so the sketch receives
+                        // a consistent activeIndex value during progress updates.
+                        var mappedIndex = index;
+                        try {
+                            var stepEl = (sc.steps && sc.steps[index]) ? sc.steps[index] : document.querySelectorAll(cfg.stepSelector)[index];
+                            if (stepEl && stepEl.dataset && stepEl.dataset.activeIndex !== undefined) {
+                                var parsed = parseInt(stepEl.dataset.activeIndex, 10);
+                                if (!isNaN(parsed)) mappedIndex = parsed;
+                            }
+                        } catch (e) { /* ignore */ }
+
                         if (window.__sketchAPI && window.__sketchAPI.setState) {
-                            window.__sketchAPI.setState({ progress: progress });
+                            window.__sketchAPI.setState({ progress: progress, activeIndex: mappedIndex });
                         }
-                        if (visualController) visualController.handleProgress(index, progress);
+                        if (visualController) visualController.handleProgress(mappedIndex, progress);
                     });
 
                 } catch (err) {

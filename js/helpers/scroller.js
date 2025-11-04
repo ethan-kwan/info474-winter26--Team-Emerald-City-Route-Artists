@@ -60,7 +60,7 @@
             var elemHeight = rect.height || 1; // avoid divide-by-zero
             var rawSectionProgress = (triggerY - elemTop) / elemHeight;
             var progress = Math.max(0, Math.min(1, rawSectionProgress));
-            console.log('scroller: sectionIndex=', sectionIndex, ' progress=', progress.toFixed(3));
+            // console.log('scroller: sectionIndex=', sectionIndex, ' progress=', progress.toFixed(3));
             self.onProgress(sectionIndex, progress);
         };
 
