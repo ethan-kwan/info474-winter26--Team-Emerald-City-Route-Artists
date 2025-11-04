@@ -6,7 +6,9 @@
         opts = opts || {};
         this.visEl = document.querySelector(opts.visSelector || '#vis');
         // predicate(activeIndex) -> boolean whether the visual should be visible
-        this.predicate = opts.predicate || function (i) { return i >= (opts.showAt || 2); };
+        // Use an explicit check for opts.showAt so a configured 0 is respected
+        var showAtVal = (typeof opts.showAt === 'number') ? opts.showAt : 2;
+        this.predicate = opts.predicate || function (i) { return i >= showAtVal; };
         this._visible = false;
     }
 

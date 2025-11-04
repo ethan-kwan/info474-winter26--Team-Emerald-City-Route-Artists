@@ -21,6 +21,7 @@
                 p.textAlign && p.textAlign(p.CENTER, p.CENTER);
                 p.textSize && p.textSize(48);
                 p.text(ai === 0 ? '2013' : 'Filler Words', cx, cy);
+                // console.log('showing title:', ai === 0 ? '2013' : 'Filler Words');
                 p.pop && p.pop();
                 return;
             }
