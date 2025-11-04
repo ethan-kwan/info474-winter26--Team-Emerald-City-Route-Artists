@@ -1,90 +1,58 @@
 // sections_p5.js
-// Loads data (TSV), initializes the p5 sketch, and implements scrolling logic without D3.
+// Orchestrator: loads data, starts the p5 sketch, and wires scroll -> visual state
 
 (function () {
-    // Parse TSV simple implementation
-    function parseTSV(text) {
-        var lines = text.trim().split(/\r?\n/);
-        if (lines.length === 0) return [];
-        var header = lines[0].split('\t');
-        var rows = lines.slice(1);
-        return rows.map(function (line) {
-            var parts = line.split('\t');
-            // some words are quoted; remove surrounding quotes
-            var word = (parts[0] || '').replace(/^"|"$/g, '');
-            var time = parseFloat(parts[1]);
-            var filler = parts[2] ? (parts[2].trim() === '1' || parts[2].trim() === 'true') : false;
-            return { word: word, time: time, filler: filler, min: Math.floor(time / 60) };
-        });
-    }
-
-    // Highlight steps and compute active index/progress
-    function Scroller(containerSelector, stepSelector) {
-        this.container = document.querySelector(containerSelector) || document.body;
-        this.steps = Array.prototype.slice.call(document.querySelectorAll(stepSelector));
-        this.sectionPositions = [];
-        this.containerStart = 0;
-        this.currentIndex = -1;
-        this.onActive = function () { };
-        this.onProgress = function () { };
-
-        var self = this;
-        this.resize = function () {
-            self.sectionPositions = [];
-            var startPos = null;
-            self.steps.forEach(function (el, i) {
-                var top = el.getBoundingClientRect().top + window.pageYOffset;
-                if (i === 0) startPos = top;
-                self.sectionPositions.push(top - startPos);
-            });
-            self.containerStart = (self.container.getBoundingClientRect().top + window.pageYOffset) || 0;
-        };
-
-        this.position = function () {
-            var pos = window.pageYOffset - 10 - self.containerStart;
-            // find sectionIndex similar to d3.bisect
-            var sectionIndex = 0;
-            for (var i = 0; i < self.sectionPositions.length; i++) {
-                if (pos >= self.sectionPositions[i]) sectionIndex = i;
-                else break;
-            }
-            sectionIndex = Math.min(self.sectionPositions.length - 1, sectionIndex);
-
-            if (self.currentIndex !== sectionIndex) {
-                self.currentIndex = sectionIndex;
-                self.onActive(sectionIndex);
-            }
-
-            var prevIndex = Math.max(sectionIndex - 1, 0);
-            var prevTop = self.sectionPositions[prevIndex];
-            var denom = (self.sectionPositions[sectionIndex] - prevTop) || 1;
-            var progress = (pos - prevTop) / denom;
-            progress = Math.max(0, Math.min(1, progress));
-            self.onProgress(sectionIndex, progress);
-        };
-
-        // bind events
-        window.addEventListener('resize', this.resize);
-        window.addEventListener('scroll', this.position);
-        // initialize
-        setTimeout(function () { self.resize(); self.position(); }, 50);
-    }
-
-    Scroller.prototype.on = function (action, cb) {
-        if (action === 'active') this.onActive = cb;
-        if (action === 'progress') this.onProgress = cb;
-        return this;
-    };
-
-    // Load TSV and start sketch
     function displayData() {
-        fetch('data/words.tsv')
-            .then(function (r) { return r.text(); })
-            .then(function (text) {
-                var data = parseTSV(text);
+        var loader = window.DataLoader;
+        if (!loader || !loader.loadTSV) {
+            console.error('sections_p5: DataLoader not available');
+            return;
+        }
+
+        // Configuration: defaults, then window.ScrollDemoConfig, then data-attributes on the container
+        var defaults = {
+            dataUrl: 'data/words.tsv',
+            containerSelector: '#graphic',
+            stepSelector: '.step',
+            visSelector: '#vis',
+            showAt: 0,
+            // trigger: where on the viewport a step becomes "active".
+            // 'center' => when the step reaches the vertical center of the viewport
+            // 'top' => when the step reaches the top (small offset)
+            trigger: 'center',
+            visHiddenClass: 'vis-hidden',
+            visVisibleClass: 'vis-visible'
+        };
+
+        var cfg = Object.assign({}, defaults, window.ScrollDemoConfig || {});
+        // allow data- attributes on container to override
+        try {
+            var containerEl = document.querySelector(cfg.containerSelector);
+            if (containerEl && containerEl.dataset) {
+                if (containerEl.dataset.dataUrl) cfg.dataUrl = containerEl.dataset.dataUrl;
+                if (containerEl.dataset.showAt) cfg.showAt = parseInt(containerEl.dataset.showAt, 10) || cfg.showAt;
+                if (containerEl.dataset.trigger) cfg.trigger = containerEl.dataset.trigger;
+                if (containerEl.dataset.stepSelector) cfg.stepSelector = containerEl.dataset.stepSelector;
+                if (containerEl.dataset.visSelector) cfg.visSelector = containerEl.dataset.visSelector;
+                if (containerEl.dataset.visHiddenClass) cfg.visHiddenClass = containerEl.dataset.visHiddenClass;
+                if (containerEl.dataset.visVisibleClass) cfg.visVisibleClass = containerEl.dataset.visVisibleClass;
+            }
+        } catch (e) { /* ignore */ }
+
+        // Ensure the vis element starts hidden according to configured class
+        // If showAt is 0 we want the visual visible immediately, so only
+        // add the hidden class when showAt > 0.
+        try {
+            var visStartEl = document.querySelector(cfg.visSelector);
+            if (visStartEl && (cfg.showAt || 0) > 0) {
+                visStartEl.classList.add(cfg.visHiddenClass);
+            }
+        } catch (e) { }
+
+        loader.loadTSV(cfg.dataUrl)
+            .then(function (data) {
                 console.log('sections_p5: loaded data, rows=', data.length);
 
-                // ensure basic p5 state exists
                 window.p5State = window.p5State || { activeIndex: 0, progress: 0 };
 
                 // Start p5 sketch with retries if startP5 isn't defined yet
@@ -94,7 +62,6 @@
                         try {
                             console.log('sections_p5: calling startP5 (attempts left)', attempts);
                             var api = startP5(data);
-                            // if the sketch returned an API, keep a reference to it
                             if (api && api.setState) {
                                 window.__sketchAPI = api;
                             }
@@ -111,22 +78,37 @@
                     }
                 })(3);
 
-                // Setup scroller to update p5 state
-                var sc = new Scroller('#graphic', '.step');
+                // Create scroller and wire up events (using configured selectors)
+                var ScrollerCtor = window.Scroller;
+                if (!ScrollerCtor) {
+                    console.error('sections_p5: Scroller not available');
+                    return;
+                }
+                var sc = new ScrollerCtor(cfg.containerSelector, cfg.stepSelector, cfg.trigger);
                 console.log('sections_p5: scroller created, steps=', sc.steps.length);
 
+                // create VisualController to show/hide #vis when appropriate
+                var VisualControllerCtor = window.VisualController;
+                var visualController = null;
+                if (VisualControllerCtor) {
+                    visualController = new VisualControllerCtor({ visSelector: cfg.visSelector, showAt: cfg.showAt });
+                }
+
                 sc.on('active', function (index) {
-                    // highlight steps
+                    // highlight steps (light coupling — just visual text opacity)
                     document.querySelectorAll('.step').forEach(function (el, i) {
                         el.style.opacity = (i === index) ? '1' : '0.1';
                     });
 
-                    // prefer the returned sketch API, fallback to global p5State
+                    // update sketch state (preferred via returned API)
                     if (window.__sketchAPI && window.__sketchAPI.setState) {
                         window.__sketchAPI.setState({ activeIndex: index });
                     } else {
                         window.p5State.activeIndex = index;
                     }
+
+                    // let visual controller decide whether to show/hide
+                    if (visualController) visualController.handleActive(index);
                 });
 
                 sc.on('progress', function (index, progress) {
@@ -135,6 +117,7 @@
                     } else {
                         window.p5State.progress = progress;
                     }
+                    if (visualController) visualController.handleProgress(index, progress);
                 });
             })
             .catch(function (err) {

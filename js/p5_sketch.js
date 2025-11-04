@@ -137,28 +137,25 @@ function startP5(rawData) {
 
     // simple drawing routine, split into helpers for clarity
     SketchManager.prototype.draw = function (p) {
+        // console.log('SketchManager.prototype.draw > activeIndex', this.state.activeIndex);
         var ai = this.state.activeIndex || 0;
         var progress = this.state.progress || 0;
 
-        // Titles for early steps
-        if (ai === 0 || ai === 1) {
-            p.fill(0);
-            p.textAlign(p.CENTER, p.CENTER);
-            p.textSize(48);
-            var cx = this.offsetX + this.width / 2;
-            var cy = this.height / 3;
-            p.text(ai === 0 ? '2013' : 'Filler Words', cx, cy);
-            return;
-        }
+        // Delegate grid rendering to GridRenderer if present, otherwise fall back
+        try {
+            if (window.GridRenderer && typeof window.GridRenderer.draw === 'function') {
+                window.GridRenderer.draw(p, this, ai, progress);
+                return;
+            }
+        } catch (e) { /* ignore and fall back to inline drawing below */ }
 
-        // Draw grid base squares in a single pass (light gray)
+        // Fallback inline grid drawing (original behavior)
         p.fill(220);
         for (var i = 0, n = this.data.length; i < n; i++) {
             var d = this.data[i];
             p.rect(d.x, d.y, this.squareSize, this.squareSize);
         }
 
-        // Highlight filler squares using cached indices (faster loop)
         if (ai >= 3) {
             p.fill(0, 150, 140);
             for (var fi = 0; fi < this._fillerIndices.length; fi++) {
@@ -168,7 +165,6 @@ function startP5(rawData) {
             }
         }
 
-        // Show aggregated count
         if (ai >= 4) {
             var totalFillers = this._totalFillers || 0;
             p.fill(0);
@@ -181,7 +177,6 @@ function startP5(rawData) {
             p.text('Filler Words', cx, cy + 40);
         }
 
-        // Cough coloring via progress
         if (ai === 7) {
             var t = Math.max(0, Math.min(1, progress));
             for (var k = 0; k < this.data.length; k++) {
