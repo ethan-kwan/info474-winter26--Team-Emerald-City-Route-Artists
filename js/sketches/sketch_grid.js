@@ -2,6 +2,33 @@
 // Responsible for rendering the main words grid and filler-related highlights
 (function () {
     window.GridRenderer = {
+        // setData: preprocess raw data and compute layout positions on the manager
+        setData: function (manager, rawData) {
+            if (!window.DataLoader || typeof window.DataLoader.preprocess !== 'function') {
+                throw new Error('DataLoader.preprocess is required by GridRenderer.setData. Ensure js/helpers/data_loader.js is loaded.');
+            }
+            var data = window.DataLoader.preprocess(rawData || []);
+            manager.data = data;
+
+            // default grid params (grid-specific details live here)
+            manager.squareSize = manager.squareSize || 6;
+            manager.squarePad = manager.squarePad || 2;
+            manager.numPerRow = Math.floor((manager.width || 600) / (manager.squareSize + manager.squarePad));
+            manager.offsetX = (manager.margin && manager.margin.left) || 20;
+            manager.offsetY = (manager.margin && manager.margin.top) || 0;
+
+            // compute positions
+            data.forEach(function (d, i) {
+                d.col = i % manager.numPerRow;
+                d.x = manager.offsetX + d.col * (manager.squareSize + manager.squarePad);
+                d.row = Math.floor(i / manager.numPerRow);
+                d.y = manager.offsetY + d.row * (manager.squareSize + manager.squarePad);
+            });
+
+            manager._fillerIndices = data.reduce(function (acc, w, idx) { if (w.filler) acc.push(idx); return acc; }, []);
+            manager._totalFillers = manager._fillerIndices.length;
+        },
+
         draw: function (p, manager, ai, progress) {
             try { console.log('GridRenderer: drawing title, ai=', ai); } catch (e) { }
 
@@ -21,7 +48,6 @@
                 p.textAlign && p.textAlign(p.CENTER, p.CENTER);
                 p.textSize && p.textSize(48);
                 p.text(ai === 0 ? '2013' : 'Filler Words', cx, cy);
-                // console.log('showing title:', ai === 0 ? '2013' : 'Filler Words');
                 p.pop && p.pop();
                 return;
             }

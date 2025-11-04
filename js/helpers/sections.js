@@ -53,8 +53,6 @@
             .then(function (data) {
                 console.log('sections: loaded data, rows=', data.length);
 
-                window.p5State = window.p5State || { activeIndex: 0, progress: 0 };
-
                 // Start p5 sketch with retries if startP5 isn't defined yet
                 (function callStartP5WithRetry(attempts) {
                     attempts = typeof attempts === 'number' ? attempts : 3;
@@ -100,11 +98,9 @@
                         el.style.opacity = (i === index) ? '1' : '0.1';
                     });
 
-                    // update sketch state (preferred via returned API)
+                    // update sketch state via returned API if available
                     if (window.__sketchAPI && window.__sketchAPI.setState) {
                         window.__sketchAPI.setState({ activeIndex: index });
-                    } else {
-                        window.p5State.activeIndex = index;
                     }
 
                     // let visual controller decide whether to show/hide
@@ -114,8 +110,6 @@
                 sc.on('progress', function (index, progress) {
                     if (window.__sketchAPI && window.__sketchAPI.setState) {
                         window.__sketchAPI.setState({ progress: progress });
-                    } else {
-                        window.p5State.progress = progress;
                     }
                     if (visualController) visualController.handleProgress(index, progress);
                 });
