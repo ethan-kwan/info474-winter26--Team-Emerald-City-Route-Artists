@@ -31,7 +31,7 @@ function startP5(rawData) {
         this.data = preprocess(data);
         this.width = 600; // content width (matches original SVG content)
         this.height = 520; // content height
-        this.margin = { top: 0, left: 20, bottom: 40, right: 10 };
+        this.margin = { top: 0, left: 80, bottom: 40, right: 10 };
         this.squareSize = 6;
         this.squarePad = 2;
         // use integer number of items per row for predictable wrapping
