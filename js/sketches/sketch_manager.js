@@ -1,4 +1,4 @@
-// sketch.js
+// sketch_manager.js
 
 function startP5(rawData) {
 
@@ -46,6 +46,9 @@ function startP5(rawData) {
 
     // delegate data handling to Renderer
     SketchManager.prototype.setData = function (newData) {
+        if (!window.Renderer || typeof window.Renderer.setData !== 'function') {
+            throw new Error('Renderer.setData(manager, data) is required but not found. Ensure js/sketches/sketch_grid.js is loaded before sketch_manager.js.');
+        }
         window.Renderer.setData(this, newData);
     };
 
@@ -53,6 +56,13 @@ function startP5(rawData) {
     SketchManager.prototype.draw = function (p) {
         var ai = this.state.activeIndex || 0;
         var progress = this.state.progress || 0;
+
+        // Require Renderer to be present. Fail fast if missing so missing
+        // modules are obvious during development.
+        if (!window.Renderer || typeof window.Renderer.draw !== 'function') {
+            throw new Error('Renderer.draw is required but not found. Ensure js/sketches/sketch_grid.js is loaded before sketch.js.');
+        }
+
         window.Renderer.draw(p, this, ai, progress);
     };
 
@@ -64,7 +74,7 @@ function startP5(rawData) {
     var manager = new SketchManager();
     // initialize data via Renderer (fail fast if missing)
     if (!window.Renderer || typeof window.Renderer.setData !== 'function') {
-        throw new Error('Renderer.setData is required at startup. Ensure js/sketches/sketch_grid.js is loaded before sketch.js.');
+        throw new Error('Renderer.setData is required at startup. Ensure js/sketches/sketch_grid.js is loaded before sketch_manager.js.');
     }
     window.Renderer.setData(manager, rawData || []);
 

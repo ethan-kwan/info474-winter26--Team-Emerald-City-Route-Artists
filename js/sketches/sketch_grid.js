@@ -38,15 +38,16 @@
             // If rawData is a string, treat it as a URL to fetch
             if (typeof rawData === 'string' && rawData.length > 0) {
                 if (!window.DataLoader || typeof window.DataLoader.loadTSV !== 'function') {
-                    throw new Error('DataLoader.loadTSV required to load data from URL. Ensure js/helpers/data_loader.js is loaded.');
+                    return Promise.reject(new Error('DataLoader.loadTSV required to load data from URL. Ensure js/helpers/data_loader.js is loaded.'));
                 }
-                window.DataLoader.loadTSV(rawData).then(function (rows) {
+                return window.DataLoader.loadTSV(rawData).then(function (rows) {
                     computeLayout(rows);
+                    return manager.data;
                 }).catch(function (err) {
                     console.error('Renderer: failed to load data from', rawData, err);
                     computeLayout([]);
+                    return manager.data;
                 });
-                return;
             }
 
             // If no rawData provided, attempt to load from config or default path
@@ -54,18 +55,20 @@
                 var cfgUrl = (window.ScrollDemoConfig && window.ScrollDemoConfig.dataUrl) ? window.ScrollDemoConfig.dataUrl : null;
                 var defaultUrl = cfgUrl || 'data/words.tsv';
                 if (window.DataLoader && typeof window.DataLoader.loadTSV === 'function') {
-                    window.DataLoader.loadTSV(defaultUrl).then(function (rows) {
+                    return window.DataLoader.loadTSV(defaultUrl).then(function (rows) {
                         computeLayout(rows);
+                        return manager.data;
                     }).catch(function (err) {
                         console.error('Renderer: failed to load default data from', defaultUrl, err);
                         computeLayout([]);
+                        return manager.data;
                     });
-                    return;
                 }
             }
 
             // Otherwise assume rawData is an array-like structure and compute synchronously
             computeLayout(rawData || []);
+            return Promise.resolve(manager.data);
         },
 
         draw: function (p, manager, ai, progress) {
