@@ -1,11 +1,11 @@
-// sections_p5.js
+// sections.js
 // Orchestrator: loads data, starts the p5 sketch, and wires scroll -> visual state
 
 (function () {
     function displayData() {
         var loader = window.DataLoader;
         if (!loader || !loader.loadTSV) {
-            console.error('sections_p5: DataLoader not available');
+            console.error('sections: DataLoader not available');
             return;
         }
 
@@ -51,7 +51,7 @@
 
         loader.loadTSV(cfg.dataUrl)
             .then(function (data) {
-                console.log('sections_p5: loaded data, rows=', data.length);
+                console.log('sections: loaded data, rows=', data.length);
 
                 window.p5State = window.p5State || { activeIndex: 0, progress: 0 };
 
@@ -60,32 +60,32 @@
                     attempts = typeof attempts === 'number' ? attempts : 3;
                     if (typeof startP5 === 'function') {
                         try {
-                            console.log('sections_p5: calling startP5 (attempts left)', attempts);
+                            console.log('sections: calling startP5 (attempts left)', attempts);
                             var api = startP5(data);
                             if (api && api.setState) {
                                 window.__sketchAPI = api;
                             }
-                            window.__sections_p5_startCalled = true;
-                            console.log('sections_p5: startP5 invoked successfully');
+                            window.__sections_startCalled = true;
+                            console.log('sections: startP5 invoked successfully');
                         } catch (err) {
-                            console.error('sections_p5: startP5 threw an error', err);
+                            console.error('sections: startP5 threw an error', err);
                         }
                     } else if (attempts > 0) {
-                        console.warn('sections_p5: startP5 not ready, retrying in 200ms (attempts left)', attempts);
+                        console.warn('sections: startP5 not ready, retrying in 200ms (attempts left)', attempts);
                         setTimeout(function () { callStartP5WithRetry(attempts - 1); }, 200);
                     } else {
-                        console.error('sections_p5: startP5 not available after retries — p5 visual will not start');
+                        console.error('sections: startP5 not available after retries — p5 visual will not start');
                     }
                 })(3);
 
                 // Create scroller and wire up events (using configured selectors)
                 var ScrollerCtor = window.Scroller;
                 if (!ScrollerCtor) {
-                    console.error('sections_p5: Scroller not available');
+                    console.error('sections: Scroller not available');
                     return;
                 }
                 var sc = new ScrollerCtor(cfg.containerSelector, cfg.stepSelector, cfg.trigger);
-                console.log('sections_p5: scroller created, steps=', sc.steps.length);
+                console.log('sections: scroller created, steps=', sc.steps.length);
 
                 // create VisualController to show/hide #vis when appropriate
                 var VisualControllerCtor = window.VisualController;

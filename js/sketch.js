@@ -1,3 +1,4 @@
+// sketch.js
 // p5 sketch to render the words grid and respond to scroll-driven state
 // Exposes startP5(rawData) which initializes the sketch using the data
 
@@ -93,12 +94,6 @@ function startP5(rawData) {
         this._computeLayout();
     };
 
-    /**
-     * Convenience: expose resize/setData/destroy on the public API as well.
-     * Call setData when you need to replace the dataset without recreating the
-     * whole p5 instance.
-     */
-
     // set visualization state (called by scroll logic)
     SketchManager.prototype.setState = function (s) {
         if (s.activeIndex !== undefined) this.state.activeIndex = s.activeIndex;
@@ -137,7 +132,6 @@ function startP5(rawData) {
 
     // simple drawing routine, split into helpers for clarity
     SketchManager.prototype.draw = function (p) {
-        // console.log('SketchManager.prototype.draw > activeIndex', this.state.activeIndex);
         var ai = this.state.activeIndex || 0;
         var progress = this.state.progress || 0;
 
