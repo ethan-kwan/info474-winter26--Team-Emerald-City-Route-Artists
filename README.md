@@ -1,3 +1,34 @@
+## Scroll-demo (p5.js scrollytelling template)
+
+A minimal scaffold for building scroll-driven p5.js visuals. Keep things simple: HTML sections in `index.html` drive the visual state exposed by `js/helpers/sections.js`.
+
+Top-level folders (high level)
+- `index.html` — page with sections that drive the scroll state.
+- `css/` — styles for layout and the visualization container.
+- `data/` — static data files (e.g., `words.tsv`).
+- `js/helpers/` — small utilities: data loading, scroller, and visual controller.
+- `js/sketches/` — sketch runtime and renderers:
+
+	- `sketch_manager.js` — p5 lifecycle and public API (startP5, setState, setData, ready).
+	- `sketch_renderer.js` — delegator that calls small per-viz modules.
+	- `examples/` — example renderer(s) (e.g., `examples/sketch_grid.js`).
+	- `viz/` — per-visual files (e.g., `viz_title.js`, `viz_scatter.js`, `viz_bar.js`).
+
+Quick start
+1. Run a local static server from the repo root:
+	 ```bash
+	 python3 -m http.server 8000
+	 ```
+2. Open http://localhost:8000 and scroll through the sections to see the visuals.
+
+Deploy
+- You can publish this repo with GitHub Pages (use a `gh-pages` branch or the `docs/` folder) or any static host.
+
+Contributing / notes
+- Keep the script order in `index.html`: helpers → optional viz modules/examples → `sketch_renderer.js` → `sketch_manager.js`.
+- Add new visuals by creating a file under `js/sketches/viz/` that exposes `window.YourViz.draw(p, manager, ai, progress)` and include it before `sketch_renderer.js`.
+
+That's it — the repo is intentionally small so you can swap in your own visuals quickly.
 
 ## Scrollytelling demo (refactored)
 
@@ -15,6 +46,11 @@ High-level architecture
 - `js/sketches/` — rendering code (pluggable renderers):
 	- `sketch_manager.js` — p5 lifecycle and manager (data-agnostic). Exposes `startP5()` which returns an API object. The API exposes a `ready` Promise that resolves when data/layout are ready.
 	- `examples/sketch_grid.js` — an example grid renderer (moved to `js/sketches/examples/sketch_grid.js`). This file registers a `window.TemplateRenderer` (an example implementation). A small shim remains at `js/sketches/sketch_grid.js` that warns about the move to preserve compatibility with old imports.
+	- `viz/` — small per-visual modules (optional). Examples provided:
+		- `viz_title.js` — title screens (active indexes 0 and 1)
+		- `viz_scatter.js` — data-agnostic scatter example
+		- `viz_bar.js` — simple bar chart example (active index 7)
+	  These files are loaded before `sketch_renderer.js` and `sketch_renderer` delegates draw calls to them when present.
 
 Key APIs and contracts
 - Configuration: set `window.ScrollDemoConfig` in `index.html` (or via `data-` attributes on `#graphic`). Important keys:
@@ -31,6 +67,9 @@ Key APIs and contracts
 	- `window.Renderer.setData(manager, rawData)` — preprocess and attach layout/data to the manager.
 	- `window.Renderer.draw(p, manager, activeIndex, progress)` — called each p5 frame to draw visuals based on current state.
 
+Note on visual organization
+- This project uses a small delegator (`js/sketches/sketch_renderer.js`) that calls into optional per-viz modules under `js/sketches/viz/` when available. If you add new visual modules, expose a global object with a `draw(p, manager, ai, progress)` function and load the script before `sketch_renderer.js` in `index.html`.
+
 Note: `Renderer.setData` may return a Promise when it performs an async load (e.g., when given a URL or when loading the default TSV). The sketch manager exposes an `api.ready` Promise that resolves once data/layout are available.
 
 - Sketch API (returned by `startP5` and exposed as `window.__sketchAPI`):
@@ -39,17 +78,3 @@ Note: `Renderer.setData` may return a Promise when it performs an async load (e.
 	- `p5` — the raw p5 instance (mostly for advanced debugging).
 	- `data` — reference to processed data on the manager. Note that `data` may be populated asynchronously after `api.ready` resolves.
 	- `ready` — a Promise that resolves to the API object once data/layout are available. Consumers that need immediate access to processed data should await `api.ready` before reading `api.data`.
-
-Notes about behavior and development
-- The code now fails fast for missing modules: `Renderer.setData`, `Renderer.draw`, and `DataLoader.preprocess` are required and will throw helpful errors if not present. This removes silent fallbacks and makes load-order issues obvious.
-- The visual show/hide logic is controlled by `visual_controller.js` and honors a configured `showAt` (including `0`).
-- The scroller supports a `trigger` option: set it to `'center'` so early steps (indices 0/1) activate when they reach the vertical center of the viewport.
-- Titles had a short sticky window applied (700ms) to avoid flicker during rapid activeIndex changes. You can tune this in the example `js/sketches/examples/sketch_grid.js` (the shimed `js/sketches/sketch_grid.js` only warns about the move).
-
-Developer quick checks
-- Hard-reload after edits: Cmd+Shift+R (or disable cache) to ensure scripts load in the right order.
-- Console checks:
-	- `!!window.DataLoader && typeof window.DataLoader.preprocess === 'function'`
-	- `!!window.Renderer && typeof window.Renderer.setData === 'function'`
-	- `!!window.__sketchAPI && typeof window.__sketchAPI.setState === 'function'`
-- If you see an explicit error like `Renderer.setData is required...`, verify script order in `index.html` — helpers must be included before sketches, and the renderer must be loaded before `sketch_manager.js`.
