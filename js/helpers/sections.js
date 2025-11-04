@@ -3,15 +3,9 @@
 
 (function () {
     function displayData() {
-        var loader = window.DataLoader;
-        if (!loader || !loader.loadTSV) {
-            console.error('sections: DataLoader not available');
-            return;
-        }
 
         // Configuration: defaults, then window.ScrollDemoConfig, then data-attributes on the container
         var defaults = {
-            dataUrl: 'data/words.tsv',
             containerSelector: '#graphic',
             stepSelector: '.step',
             visSelector: '#vis',
@@ -29,7 +23,6 @@
         try {
             var containerEl = document.querySelector(cfg.containerSelector);
             if (containerEl && containerEl.dataset) {
-                if (containerEl.dataset.dataUrl) cfg.dataUrl = containerEl.dataset.dataUrl;
                 if (containerEl.dataset.showAt) cfg.showAt = parseInt(containerEl.dataset.showAt, 10) || cfg.showAt;
                 if (containerEl.dataset.trigger) cfg.trigger = containerEl.dataset.trigger;
                 if (containerEl.dataset.stepSelector) cfg.stepSelector = containerEl.dataset.stepSelector;
@@ -49,74 +42,67 @@
             }
         } catch (e) { }
 
-        loader.loadTSV(cfg.dataUrl)
-            .then(function (data) {
-                console.log('sections: loaded data, rows=', data.length);
-
-                // Start p5 sketch with retries if startP5 isn't defined yet
-                (function callStartP5WithRetry(attempts) {
-                    attempts = typeof attempts === 'number' ? attempts : 3;
-                    if (typeof startP5 === 'function') {
-                        try {
-                            console.log('sections: calling startP5 (attempts left)', attempts);
-                            var api = startP5(data);
-                            if (api && api.setState) {
-                                window.__sketchAPI = api;
-                            }
-                            window.__sections_startCalled = true;
-                            console.log('sections: startP5 invoked successfully');
-                        } catch (err) {
-                            console.error('sections: startP5 threw an error', err);
-                        }
-                    } else if (attempts > 0) {
-                        console.warn('sections: startP5 not ready, retrying in 200ms (attempts left)', attempts);
-                        setTimeout(function () { callStartP5WithRetry(attempts - 1); }, 200);
-                    } else {
-                        console.error('sections: startP5 not available after retries — p5 visual will not start');
+        // Start p5 sketch with retries if startP5 isn't defined yet.
+        (function callStartP5WithRetry(attempts) {
+            attempts = typeof attempts === 'number' ? attempts : 3;
+            if (typeof startP5 === 'function') {
+                try {
+                    console.log('sections: calling startP5 (attempts left)', attempts);
+                    var api = startP5();
+                    if (api && api.setState) {
+                        window.__sketchAPI = api;
                     }
-                })(3);
+                    window.__sections_startCalled = true;
+                    console.log('sections: startP5 invoked successfully');
 
-                // Create scroller and wire up events (using configured selectors)
-                var ScrollerCtor = window.Scroller;
-                if (!ScrollerCtor) {
-                    console.error('sections: Scroller not available');
-                    return;
-                }
-                var sc = new ScrollerCtor(cfg.containerSelector, cfg.stepSelector, cfg.trigger);
-                console.log('sections: scroller created, steps=', sc.steps.length);
+                    // Create scroller and wire up events (using configured selectors)
+                    var ScrollerCtor = window.Scroller;
+                    if (!ScrollerCtor) {
+                        console.error('sections: Scroller not available');
+                        return;
+                    }
+                    var sc = new ScrollerCtor(cfg.containerSelector, cfg.stepSelector, cfg.trigger);
+                    console.log('sections: scroller created, steps=', sc.steps.length);
 
-                // create VisualController to show/hide #vis when appropriate
-                var VisualControllerCtor = window.VisualController;
-                var visualController = null;
-                if (VisualControllerCtor) {
-                    visualController = new VisualControllerCtor({ visSelector: cfg.visSelector, showAt: cfg.showAt });
-                }
+                    // create VisualController to show/hide #vis when appropriate
+                    var VisualControllerCtor = window.VisualController;
+                    var visualController = null;
+                    if (VisualControllerCtor) {
+                        visualController = new VisualControllerCtor({ visSelector: cfg.visSelector, showAt: cfg.showAt });
+                    }
 
-                sc.on('active', function (index) {
-                    // highlight steps (light coupling — just visual text opacity)
-                    document.querySelectorAll('.step').forEach(function (el, i) {
-                        el.style.opacity = (i === index) ? '1' : '0.1';
+                    sc.on('active', function (index) {
+                        // highlight steps (light coupling — just visual text opacity)
+                        document.querySelectorAll('.step').forEach(function (el, i) {
+                            el.style.opacity = (i === index) ? '1' : '0.1';
+                        });
+
+                        // update sketch state via returned API if available
+                        if (window.__sketchAPI && window.__sketchAPI.setState) {
+                            window.__sketchAPI.setState({ activeIndex: index });
+                        }
+
+                        // let visual controller decide whether to show/hide
+                        if (visualController) visualController.handleActive(index);
                     });
 
-                    // update sketch state via returned API if available
-                    if (window.__sketchAPI && window.__sketchAPI.setState) {
-                        window.__sketchAPI.setState({ activeIndex: index });
-                    }
+                    sc.on('progress', function (index, progress) {
+                        if (window.__sketchAPI && window.__sketchAPI.setState) {
+                            window.__sketchAPI.setState({ progress: progress });
+                        }
+                        if (visualController) visualController.handleProgress(index, progress);
+                    });
 
-                    // let visual controller decide whether to show/hide
-                    if (visualController) visualController.handleActive(index);
-                });
-
-                sc.on('progress', function (index, progress) {
-                    if (window.__sketchAPI && window.__sketchAPI.setState) {
-                        window.__sketchAPI.setState({ progress: progress });
-                    }
-                    if (visualController) visualController.handleProgress(index, progress);
-                });
-            })
-            .catch(function (err) {
-                console.error('Failed to load data/words.tsv', err);
-            });
+                } catch (err) {
+                    console.error('sections: startP5 threw an error', err);
+                }
+            } else if (attempts > 0) {
+                console.warn('sections: startP5 not ready, retrying in 200ms (attempts left)', attempts);
+                setTimeout(function () { callStartP5WithRetry(attempts - 1); }, 200);
+            } else {
+                console.error('sections: startP5 not available after retries — p5 visual will not start');
+            }
+        })(3);
     }
 
     // run on DOM ready

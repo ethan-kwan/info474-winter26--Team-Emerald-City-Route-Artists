@@ -2,31 +2,70 @@
 // Responsible for rendering the main words grid and filler-related highlights
 (function () {
     window.Renderer = {
-        // setData: preprocess raw data and compute layout positions on the manager
+        // setData: accept either an array of preloaded rows or a URL string
+        // If a URL (or no data) is provided, attempt to load via DataLoader.loadTSV
+        // then preprocess and compute layout. This keeps data-loading inside
+        // the renderer / data_loader and out of `sections`.
         setData: function (manager, rawData) {
-            if (!window.DataLoader || typeof window.DataLoader.preprocess !== 'function') {
-                throw new Error('DataLoader.preprocess is required by Renderer.setData. Ensure js/helpers/data_loader.js is loaded.');
+            var self = this;
+
+            function computeLayout(data) {
+                data = window.DataLoader.preprocess(data || []);
+                manager.data = data;
+
+                // default grid params (grid-specific details live here)
+                manager.squareSize = manager.squareSize || 6;
+                manager.squarePad = manager.squarePad || 2;
+                manager.numPerRow = Math.floor((manager.width || 600) / (manager.squareSize + manager.squarePad));
+                manager.offsetX = (manager.margin && manager.margin.left) || 20;
+                manager.offsetY = (manager.margin && manager.margin.top) || 0;
+
+                // compute positions
+                data.forEach(function (d, i) {
+                    d.col = i % manager.numPerRow;
+                    d.x = manager.offsetX + d.col * (manager.squareSize + manager.squarePad);
+                    d.row = Math.floor(i / manager.numPerRow);
+                    d.y = manager.offsetY + d.row * (manager.squareSize + manager.squarePad);
+                });
+
+                manager._fillerIndices = data.reduce(function (acc, w, idx) { if (w.filler) acc.push(idx); return acc; }, []);
+                manager._totalFillers = manager._fillerIndices.length;
+
+                // expose for quick dev inspection
+                try { if (window.__sketchAPI) window.__sketchAPI.data = manager.data; } catch (e) { }
             }
-            var data = window.DataLoader.preprocess(rawData || []);
-            manager.data = data;
 
-            // default grid params (grid-specific details live here)
-            manager.squareSize = manager.squareSize || 6;
-            manager.squarePad = manager.squarePad || 2;
-            manager.numPerRow = Math.floor((manager.width || 600) / (manager.squareSize + manager.squarePad));
-            manager.offsetX = (manager.margin && manager.margin.left) || 20;
-            manager.offsetY = (manager.margin && manager.margin.top) || 0;
+            // If rawData is a string, treat it as a URL to fetch
+            if (typeof rawData === 'string' && rawData.length > 0) {
+                if (!window.DataLoader || typeof window.DataLoader.loadTSV !== 'function') {
+                    throw new Error('DataLoader.loadTSV required to load data from URL. Ensure js/helpers/data_loader.js is loaded.');
+                }
+                window.DataLoader.loadTSV(rawData).then(function (rows) {
+                    computeLayout(rows);
+                }).catch(function (err) {
+                    console.error('Renderer: failed to load data from', rawData, err);
+                    computeLayout([]);
+                });
+                return;
+            }
 
-            // compute positions
-            data.forEach(function (d, i) {
-                d.col = i % manager.numPerRow;
-                d.x = manager.offsetX + d.col * (manager.squareSize + manager.squarePad);
-                d.row = Math.floor(i / manager.numPerRow);
-                d.y = manager.offsetY + d.row * (manager.squareSize + manager.squarePad);
-            });
+            // If no rawData provided, attempt to load from config or default path
+            if (!rawData || (Array.isArray(rawData) && rawData.length === 0)) {
+                var cfgUrl = (window.ScrollDemoConfig && window.ScrollDemoConfig.dataUrl) ? window.ScrollDemoConfig.dataUrl : null;
+                var defaultUrl = cfgUrl || 'data/words.tsv';
+                if (window.DataLoader && typeof window.DataLoader.loadTSV === 'function') {
+                    window.DataLoader.loadTSV(defaultUrl).then(function (rows) {
+                        computeLayout(rows);
+                    }).catch(function (err) {
+                        console.error('Renderer: failed to load default data from', defaultUrl, err);
+                        computeLayout([]);
+                    });
+                    return;
+                }
+            }
 
-            manager._fillerIndices = data.reduce(function (acc, w, idx) { if (w.filler) acc.push(idx); return acc; }, []);
-            manager._totalFillers = manager._fillerIndices.length;
+            // Otherwise assume rawData is an array-like structure and compute synchronously
+            computeLayout(rawData || []);
         },
 
         draw: function (p, manager, ai, progress) {
