@@ -1,8 +1,8 @@
-// sketch_grid.js
-// Responsible for rendering the main words grid and filler-related highlights
+// sketch_renderer.js
 
+// Responsible for rendering the main words grid and filler-related highlights
 (function () {
-    window.TemplateRenderer = {
+    window.Renderer = {
         // setData: accept either an array of preloaded rows or a URL string
         // If a URL (or no data) is provided, attempt to load via DataLoader.loadTSV
         // then preprocess and compute layout. This keeps data-loading inside
@@ -45,7 +45,7 @@
                     computeLayout(rows);
                     return manager.data;
                 }).catch(function (err) {
-                    console.error('Template Renderer: failed to load data from', rawData, err);
+                    console.error('Renderer: failed to load data from', rawData, err);
                     computeLayout([]);
                     return manager.data;
                 });
@@ -60,7 +60,7 @@
                         computeLayout(rows);
                         return manager.data;
                     }).catch(function (err) {
-                        console.error('Template Renderer: failed to load default data from', defaultUrl, err);
+                        console.error('Renderer: failed to load default data from', defaultUrl, err);
                         computeLayout([]);
                         return manager.data;
                     });
@@ -73,7 +73,7 @@
         },
 
         draw: function (p, manager, ai, progress) {
-            try { console.log('Template Renderer: drawing title, ai=', ai); } catch (e) { }
+            try { console.log('Renderer: drawing title, ai=', ai); } catch (e) { }
 
             // Handle title screens for early steps (keep titles in same sketch file)
             if (ai === 0 || ai === 1) {

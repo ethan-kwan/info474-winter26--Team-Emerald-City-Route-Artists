@@ -2,6 +2,8 @@
 
 function startP5(rawData) {
 
+    var localRenderer = window.TemplateRenderer || window.Renderer;
+
     // --- Sketch manager ----------------------------------------------------
     function SketchManager() {
         // core layout settings (canvas size only)
@@ -14,7 +16,7 @@ function startP5(rawData) {
         // drawing state
         this.state = { activeIndex: 0, progress: 0 };
 
-        // data will be attached by Renderer.setData(manager, data)
+        // data will be attached by localRenderer.setData(manager, data)
         this.data = [];
 
         // create the p5 instance bound to this manager
@@ -44,16 +46,16 @@ function startP5(rawData) {
         if (s.progress !== undefined) this.state.progress = s.progress;
     };
 
-    // delegate data handling to Renderer
+    // delegate data handling to localRenderer
     SketchManager.prototype.setData = function (newData) {
-        return window.Renderer.setData(this, newData);
+        return localRenderer.setData(this, newData);
     };
 
     // simple drawing routine, split into helpers for clarity
     SketchManager.prototype.draw = function (p) {
         var ai = this.state.activeIndex || 0;
         var progress = this.state.progress || 0;
-        window.Renderer.draw(p, this, ai, progress);
+        localRenderer.draw(p, this, ai, progress);
     };
 
     // create (or replace) singleton manager and expose API
@@ -62,11 +64,11 @@ function startP5(rawData) {
         window.__sketchAPI = null;
     }
     var manager = new SketchManager();
-    // initialize data via Renderer (fail fast if missing)
-    if (!window.Renderer || typeof window.Renderer.setData !== 'function') {
-        throw new Error('Renderer.setData is required at startup. Ensure js/sketches/sketch_grid.js is loaded before sketch_manager.js.');
+    // initialize data via localRenderer (fail fast if missing)
+    if (!localRenderer || typeof localRenderer.setData !== 'function') {
+        throw new Error('localRenderer.setData is required at startup.');
     }
-    var setDataResult = window.Renderer.setData(manager, rawData || []);
+    var setDataResult = localRenderer.setData(manager, rawData || []);
 
     var api = {
         setState: manager.setState.bind(manager),
