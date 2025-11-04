@@ -12,18 +12,7 @@ function startP5(rawData) {
     // Simple module wrapper that returns a small API for controlling the sketch.
 
     // --- Data preprocessing -------------------------------------------------
-    function preprocess(data) {
-        data = data || [];
-        return data.map(function (d, i) {
-            return {
-                word: (d.word || '').replace(/^"|"$/g, ''),
-                filler: (d.filler === true || d.filler === '1' || d.filler === 1 || d.filler === 'true'),
-                time: +d.time,
-                min: Math.floor(+d.time / 60),
-                index: i
-            };
-        });
-    }
+    var preprocess = window.DataLoader.preprocess;
 
     // --- Sketch manager ----------------------------------------------------
     function SketchManager(data) {
@@ -134,13 +123,13 @@ function startP5(rawData) {
         var ai = this.state.activeIndex || 0;
         var progress = this.state.progress || 0;
 
-        try {
-            if (window.GridRenderer && typeof window.GridRenderer.draw === 'function') {
-                window.GridRenderer.draw(p, this, ai, progress);
-                return;
-            }
-        } catch (e) { /* ignore and fall back to inline drawing below */ }
+        // Require GridRenderer to be present. Fail fast if missing so missing
+        // modules are obvious during development.
+        if (!window.GridRenderer || typeof window.GridRenderer.draw !== 'function') {
+            throw new Error('GridRenderer.draw is required but not found. Ensure js/sketches/sketch_grid.js is loaded before sketch.js.');
+        }
 
+        window.GridRenderer.draw(p, this, ai, progress);
     };
 
     // create (or replace) singleton manager and expose API

@@ -25,4 +25,20 @@
         parseTSV: parseTSV,
         loadTSV: loadTSV
     };
+
+    // Shared preprocess helper: normalize rows into the shape sketches expect.
+    // Accepts an array of objects {word, time, filler, min} (as returned by parseTSV)
+    // and returns an array with guaranteed types and an index property.
+    window.DataLoader.preprocess = function (data) {
+        data = data || [];
+        return data.map(function (d, i) {
+            return {
+                word: (d.word || '').replace(/^"|"$/g, ''),
+                filler: !!d.filler,
+                time: +d.time || 0,
+                min: (typeof d.min === 'number') ? d.min : Math.floor((+d.time || 0) / 60),
+                index: i
+            };
+        });
+    };
 })();
