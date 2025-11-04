@@ -7,6 +7,7 @@
             var cy = (manager.offsetY || 0) + (manager.height || 520) / 3;
             p.push();
             p.noStroke();
+            p.fill(255);
             var w = 420;
             var h = 120;
             p.rect(cx - w / 2, cy - h / 2, w, h, 6);
