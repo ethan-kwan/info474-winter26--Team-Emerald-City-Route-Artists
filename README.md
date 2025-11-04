@@ -14,7 +14,7 @@ High-level architecture
 	- `sections.js` — orchestrator: starts the sketch and wires scroller -> sketch API (dataset-agnostic).
 - `js/sketches/` — rendering code (pluggable renderers):
 	- `sketch_manager.js` — p5 lifecycle and manager (data-agnostic). Exposes `startP5()` which returns an API object. The API exposes a `ready` Promise that resolves when data/layout are ready.
-	- `sketch_grid.js` — the grid renderer (registered globally as `window.Renderer`).
+	- `examples/sketch_grid.js` — an example grid renderer (moved to `js/sketches/examples/sketch_grid.js`). This file registers a `window.TemplateRenderer` (an example implementation). A small shim remains at `js/sketches/sketch_grid.js` that warns about the move to preserve compatibility with old imports.
 
 Key APIs and contracts
 - Configuration: set `window.ScrollDemoConfig` in `index.html` (or via `data-` attributes on `#graphic`). Important keys:
@@ -25,7 +25,7 @@ Key APIs and contracts
 
 - Data loading and preprocessing:
 	- `js/helpers/data_loader.js` exposes `DataLoader.loadTSV(url)` and `DataLoader.preprocess(data)`.
-	- `Renderer.setData(manager, rawData)` (implemented in `sketch_grid.js`) calls `DataLoader.preprocess` and computes layout (x/y positions, rows/cols) and cached aggregates (e.g., `_fillerIndices`, `_totalFillers`) on the `manager` object. `Renderer.setData` returns a Promise when it performs async loads; callers can await it.
+	- `Renderer.setData(manager, rawData)` — the renderer contract for preprocessing and layout. The example grid renderer implements this behavior (see `js/sketches/examples/sketch_grid.js` as `TemplateRenderer`). Implementations should call `DataLoader.preprocess` and compute layout (x/y positions, rows/cols) and cached aggregates (e.g., `_fillerIndices`, `_totalFillers`) on the `manager` object. `Renderer.setData` may return a Promise when it performs async loads; callers can await it.
 
 - Renderer contract (globally exposed):
 	- `window.Renderer.setData(manager, rawData)` — preprocess and attach layout/data to the manager.
@@ -44,7 +44,7 @@ Notes about behavior and development
 - The code now fails fast for missing modules: `Renderer.setData`, `Renderer.draw`, and `DataLoader.preprocess` are required and will throw helpful errors if not present. This removes silent fallbacks and makes load-order issues obvious.
 - The visual show/hide logic is controlled by `visual_controller.js` and honors a configured `showAt` (including `0`).
 - The scroller supports a `trigger` option: set it to `'center'` so early steps (indices 0/1) activate when they reach the vertical center of the viewport.
-- Titles had a short sticky window applied (700ms) to avoid flicker during rapid activeIndex changes. You can tune this in `js/sketches/sketch_grid.js`.
+- Titles had a short sticky window applied (700ms) to avoid flicker during rapid activeIndex changes. You can tune this in the example `js/sketches/examples/sketch_grid.js` (the shimed `js/sketches/sketch_grid.js` only warns about the move).
 
 Developer quick checks
 - Hard-reload after edits: Cmd+Shift+R (or disable cache) to ensure scripts load in the right order.
