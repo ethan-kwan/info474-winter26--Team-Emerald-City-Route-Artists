@@ -53,9 +53,3 @@ Developer quick checks
 	- `!!window.Renderer && typeof window.Renderer.setData === 'function'`
 	- `!!window.__sketchAPI && typeof window.__sketchAPI.setState === 'function'`
 - If you see an explicit error like `Renderer.setData is required...`, verify script order in `index.html` — helpers must be included before sketches, and the renderer must be loaded before `sketch_manager.js`.
-
-Deprecated code
-- Original D3-based sources (if you need to inspect them) live in `js/deprecated/`.
-
-If you'd like, I can add a short CONTRIBUTING or DEV_NOTES document with step-by-step dev/run instructions and common troubleshooting tips.
-
