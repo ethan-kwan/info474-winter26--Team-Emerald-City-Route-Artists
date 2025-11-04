@@ -34,7 +34,17 @@ function startP5(rawData) {
         this.state = { activeIndex: 0, progress: 0 };
 
         // compute positions and some cached lists used when rendering
-        this._computeLayout();
+        this.data.forEach(function (d, i) {
+            d.col = i % this.numPerRow;
+            d.x = this.offsetX + d.col * (this.squareSize + this.squarePad);
+            d.row = Math.floor(i / this.numPerRow);
+            // apply top offset so the grid doesn't start at the very top of the canvas
+            d.y = this.offsetY + d.row * (this.squareSize + this.squarePad);
+        }, this);
+        // cache indices of filler words for faster rendering
+        this._fillerIndices = this.data.reduce(function (acc, w, idx) { if (w.filler) acc.push(idx); return acc; }, []);
+        // cache totals
+        this._totalFillers = this._fillerIndices.length;
 
         // create the p5 instance bound to this manager
         var self = this;
@@ -56,58 +66,11 @@ function startP5(rawData) {
         this.p5 = new p5(sketch);
     }
 
-    /**
-     * recompute layout positions for current data and size
-     */
-    SketchManager.prototype._computeLayout = function () {
-        this.data.forEach(function (d, i) {
-            d.col = i % this.numPerRow;
-            d.x = this.offsetX + d.col * (this.squareSize + this.squarePad);
-            d.row = Math.floor(i / this.numPerRow);
-            // apply top offset so the grid doesn't start at the very top of the canvas
-            d.y = this.offsetY + d.row * (this.squareSize + this.squarePad);
-        }, this);
-        // cache indices of filler words for faster rendering
-        this._fillerIndices = this.data.reduce(function (acc, w, idx) { if (w.filler) acc.push(idx); return acc; }, []);
-        // cache totals
-        this._totalFillers = this._fillerIndices.length;
-    };
-
-    /**
-     * Replace the data used by the sketch and recompute layout.
-     * Useful if you want to load new data without recreating the sketch.
-     */
-    SketchManager.prototype.setData = function (newData) {
-        this.data = preprocess(newData);
-        this._computeLayout();
-    };
 
     // set visualization state (called by scroll logic)
     SketchManager.prototype.setState = function (s) {
         if (s.activeIndex !== undefined) this.state.activeIndex = s.activeIndex;
         if (s.progress !== undefined) this.state.progress = s.progress;
-    };
-
-    /**
-     * Resize the canvas and recompute layout. Call this when the page
-     * layout changes (for example, container width changes) so the canvas
-     * and grid remain aligned with the text steps.
-     * - opts.width: optional new content width (not including margins)
-     */
-    SketchManager.prototype.resize = function (opts) {
-        opts = opts || {};
-        if (opts.width) this.width = opts.width;
-        // recompute integer items per row and canvas size
-        this.numPerRow = Math.floor(this.width / (this.squareSize + this.squarePad));
-        this.canvasWidth = this.width + this.margin.left + this.margin.right;
-        this.canvasHeight = this.height + this.margin.top + this.margin.bottom;
-        // if p5 instance exists, resize its canvas
-        try {
-            if (this.p5 && this.p5.resizeCanvas) {
-                this.p5.resizeCanvas(this.canvasWidth, this.canvasHeight);
-            }
-        } catch (e) { console.warn('SketchManager.resize: failed to resize canvas', e); }
-        this._computeLayout();
     };
 
     /**
@@ -140,8 +103,6 @@ function startP5(rawData) {
     var manager = new SketchManager(rawData || []);
     var api = {
         setState: manager.setState.bind(manager),
-        setData: manager.setData.bind(manager),
-        resize: manager.resize.bind(manager),
         destroy: manager.destroy.bind(manager),
         p5: manager.p5,
         data: manager.data
