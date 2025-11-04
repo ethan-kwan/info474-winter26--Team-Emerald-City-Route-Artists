@@ -73,13 +73,6 @@ function startP5(rawData) {
         if (s.progress !== undefined) this.state.progress = s.progress;
     };
 
-    /**
-     * Cleanly destroy the p5 instance and free references.
-     */
-    SketchManager.prototype.destroy = function () {
-        try { this.p5 && this.p5.remove && this.p5.remove(); } catch (e) { }
-        this.p5 = null;
-    };
 
     // simple drawing routine, split into helpers for clarity
     SketchManager.prototype.draw = function (p) {
@@ -103,7 +96,6 @@ function startP5(rawData) {
     var manager = new SketchManager(rawData || []);
     var api = {
         setState: manager.setState.bind(manager),
-        destroy: manager.destroy.bind(manager),
         p5: manager.p5,
         data: manager.data
     };
