@@ -10,7 +10,6 @@ window.p5State = {
 
 function startP5(rawData) {
     // Simple module wrapper that returns a small API for controlling the sketch.
-    // Keeps the p5 code compact and readable for teaching and extension.
 
     // --- Data preprocessing -------------------------------------------------
     function preprocess(data) {
