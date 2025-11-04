@@ -3,9 +3,10 @@
 (function () {
     window.GridRenderer = {
         draw: function (p, manager, ai, progress) {
+            try { console.log('GridRenderer: drawing title, ai=', ai); } catch (e) { }
+
             // Handle title screens for early steps (keep titles in same sketch file)
             if (ai === 0 || ai === 1) {
-                try { console.log('GridRenderer: drawing title, ai=', ai); } catch (e) { }
                 // draw a subtle background so it's obvious where the title is rendered
                 var cx = manager.offsetX + manager.width / 2;
                 var cy = manager.height / 3;

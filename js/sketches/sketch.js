@@ -135,7 +135,6 @@ function startP5(rawData) {
         var ai = this.state.activeIndex || 0;
         var progress = this.state.progress || 0;
 
-        // Delegate grid rendering to GridRenderer if present, otherwise fall back
         try {
             if (window.GridRenderer && typeof window.GridRenderer.draw === 'function') {
                 window.GridRenderer.draw(p, this, ai, progress);
@@ -143,47 +142,6 @@ function startP5(rawData) {
             }
         } catch (e) { /* ignore and fall back to inline drawing below */ }
 
-        // Fallback inline grid drawing (original behavior)
-        p.fill(220);
-        for (var i = 0, n = this.data.length; i < n; i++) {
-            var d = this.data[i];
-            p.rect(d.x, d.y, this.squareSize, this.squareSize);
-        }
-
-        if (ai >= 3) {
-            p.fill(0, 150, 140);
-            for (var fi = 0; fi < this._fillerIndices.length; fi++) {
-                var idx = this._fillerIndices[fi];
-                var wd = this.data[idx];
-                p.rect(wd.x, wd.y, this.squareSize, this.squareSize);
-            }
-        }
-
-        if (ai >= 4) {
-            var totalFillers = this._totalFillers || 0;
-            p.fill(0);
-            p.textAlign(p.CENTER, p.CENTER);
-            p.textSize(40);
-            var cx = this.offsetX + this.width / 2;
-            var cy = this.offsetY + this.height / 3;
-            p.text(totalFillers, cx, cy);
-            p.textSize(16);
-            p.text('Filler Words', cx, cy + 40);
-        }
-
-        if (ai === 7) {
-            var t = Math.max(0, Math.min(1, progress));
-            for (var k = 0; k < this.data.length; k++) {
-                var wd = this.data[k];
-                if (wd.filler && wd.min >= 14) {
-                    var r = Math.floor(0 + (255 - 0) * t);
-                    var g = Math.floor(128 - (128 * t));
-                    var b = Math.floor(120 - (120 * t));
-                    p.fill(r, g, b);
-                    p.rect(wd.x, wd.y, this.squareSize, this.squareSize);
-                }
-            }
-        }
     };
 
     // create (or replace) singleton manager and expose API
