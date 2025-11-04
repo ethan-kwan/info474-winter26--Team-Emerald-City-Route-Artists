@@ -80,18 +80,18 @@
                 // draw a subtle background so it's obvious where the title is rendered
                 var cx = manager.offsetX + manager.width / 2;
                 var cy = manager.height / 3;
-                p.push && p.push();
-                p.noStroke && p.noStroke();
-                p.fill && p.fill(255, 255, 160, 140);
+                p.push();
+                p.noStroke();
+                p.fill(255, 255, 160, 140);
                 var w = 420;
                 var h = 120;
-                p.rect && p.rect(cx - w / 2, cy - h / 2, w, h, 6);
+                p.rect(cx - w / 2, cy - h / 2, w, h, 6);
 
-                p.fill && p.fill(0);
-                p.textAlign && p.textAlign(p.CENTER, p.CENTER);
-                p.textSize && p.textSize(48);
+                p.fill(0);
+                p.textAlign(p.CENTER, p.CENTER);
+                p.textSize(48);
                 p.text(ai === 0 ? '2013' : 'Filler Words', cx, cy);
-                p.pop && p.pop();
+                p.pop();
                 return;
             }
 
