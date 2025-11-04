@@ -1,6 +1,6 @@
 // sketch_manager.js
 
-function startP5(rawData) {
+function startP5() {
 
     var localRenderer = window.TemplateRenderer || window.Renderer;
 
@@ -68,7 +68,8 @@ function startP5(rawData) {
     if (!localRenderer || typeof localRenderer.setData !== 'function') {
         throw new Error('localRenderer.setData is required at startup.');
     }
-    var setDataResult = localRenderer.setData(manager, rawData || []);
+
+    var setDataResult = localRenderer.setData(manager);
 
     var api = {
         setState: manager.setState.bind(manager),
