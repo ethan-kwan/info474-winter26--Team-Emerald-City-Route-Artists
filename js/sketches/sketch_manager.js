@@ -1,99 +1,114 @@
 // sketch_manager.js
-
 function startP5() {
 
-    var localRenderer;
-    // localRenderer = window.TemplateRenderer;
-    localRenderer = window.Renderer;
+  var localRenderer;
+  localRenderer = window.Renderer;
 
-    // --- Sketch manager ----------------------------------------------------
-    function SketchManager() {
-        // core layout settings (canvas size only)
-        this.width = 600; // content width
-        this.height = 520; // content height
-        this.margin = { top: 0, left: 80, bottom: 40, right: 10 };
-        this.canvasWidth = this.width + this.margin.left + this.margin.right;
-        this.canvasHeight = this.height + this.margin.top + this.margin.bottom;
+  function SketchManager() {
+    // No margins anymore (full canvas)
+    this.margin = { top: 0, left: 0, bottom: 0, right: 0 };
 
-        // drawing state
-        this.state = { activeIndex: 0, progress: 0 };
+    // drawing state
+    this.state = { activeIndex: 0, progress: 0 };
 
-        // data will be attached by localRenderer.setData(manager, data)
-        this.data = [];
+    // data placeholder
+    this.data = [];
 
-        // create the p5 instance bound to this manager
-        var self = this;
-        var sketch = function (p) {
-            p.setup = function () {
-                var parent = document.getElementById('vis');
-                parent.innerHTML = '';
-                p.createCanvas(self.canvasWidth, self.canvasHeight).parent('vis');
-                p.noStroke();
-                p.frameRate(30);
-            };
+    // compute size from the #vis container + viewport
+    this._computeSize = function () {
+      var parent = document.getElementById('vis');
+      var parentW = parent ? parent.clientWidth : window.innerWidth;
 
-            p.draw = function () {
-                p.background(255);
-                self.draw(p);
-            };
-        };
+      // big canvas, but don’t go insane on ultra-wide screens
+      var maxW = 1200;
+      var w = Math.max(360, Math.min(maxW, parentW));
 
-        this.p5 = new p5(sketch);
-    }
+      // tall enough to feel like a “map”
+      var h = Math.max(560, Math.floor(window.innerHeight * 0.88));
 
+      this.width = w;
+      this.height = h;
+      this.canvasWidth = w;
+      this.canvasHeight = h;
 
-    // set visualization state (called by scroll logic)
-    SketchManager.prototype.setState = function (s) {
-        if (s.activeIndex !== undefined) this.state.activeIndex = s.activeIndex;
-        if (s.progress !== undefined) this.state.progress = s.progress;
+      this.offsetX = 0;
+      this.offsetY = 0;
     };
 
-    // delegate data handling to localRenderer
-    SketchManager.prototype.setData = function (newData) {
-        return localRenderer.setData(this, newData);
+    this._computeSize();
+
+    var self = this;
+    var sketch = function (p) {
+      p.setup = function () {
+        var parent = document.getElementById('vis');
+        if (parent) parent.innerHTML = '';
+
+        self._computeSize();
+        p.createCanvas(self.canvasWidth, self.canvasHeight).parent('vis');
+        p.noStroke();
+        p.frameRate(30);
+      };
+
+      p.draw = function () {
+        self.draw(p);
+      };
+
+      p.windowResized = function () {
+        self._computeSize();
+        p.resizeCanvas(self.canvasWidth, self.canvasHeight);
+      };
     };
 
-    // simple drawing routine, split into helpers for clarity
-    SketchManager.prototype.draw = function (p) {
-        var ai = this.state.activeIndex || 0;
-        var progress = this.state.progress || 0;
-        localRenderer.draw(p, this, ai, progress);
-    };
+    this.p5 = new p5(sketch);
+  }
 
-    // create (or replace) singleton manager and expose API
-    if (window.__sketchAPI && window.__sketchAPI.p5) {
-        try { window.__sketchAPI.p5.remove(); } catch (e) { }
-        window.__sketchAPI = null;
-    }
-    var manager = new SketchManager();
-    // initialize data via localRenderer (fail fast if missing)
-    if (!localRenderer || typeof localRenderer.setData !== 'function') {
-        throw new Error('localRenderer.setData is required at startup.');
-    }
+  SketchManager.prototype.setState = function (s) {
+    if (s.activeIndex !== undefined) this.state.activeIndex = s.activeIndex;
+    if (s.progress !== undefined) this.state.progress = s.progress;
+  };
 
-    var setDataResult = localRenderer.setData(manager);
+  SketchManager.prototype.setData = function (newData) {
+    return localRenderer.setData(this, newData);
+  };
 
-    var api = {
-        setState: manager.setState.bind(manager),
-        setData: manager.setData.bind(manager),
-        p5: manager.p5,
-        data: manager.data
-    };
+  SketchManager.prototype.draw = function (p) {
+    p.background(255);
+    var ai = this.state.activeIndex || 0;
+    var progress = this.state.progress || 0;
+    localRenderer.draw(p, this, ai, progress);
+  };
 
-    // Expose a `ready` promise so callers can wait until data/layout are ready.
-    if (setDataResult && typeof setDataResult.then === 'function') {
-        api.ready = setDataResult.then(function () { return api; });
-    } else {
-        api.ready = Promise.resolve(api);
-    }
+  if (window.__sketchAPI && window.__sketchAPI.p5) {
+    try { window.__sketchAPI.p5.remove(); } catch (e) { }
+    window.__sketchAPI = null;
+  }
 
-    // Expose the API globally once ready so consumers (like sections) see
-    // the populated data without racing the async load.
-    api.ready.then(function () {
-        try { window.__sketchAPI = api; } catch (e) { }
-    }).catch(function () {
-        try { window.__sketchAPI = api; } catch (e) { }
-    });
+  var manager = new SketchManager();
 
-    return api;
+  if (!localRenderer || typeof localRenderer.setData !== 'function') {
+    throw new Error('localRenderer.setData is required at startup.');
+  }
+
+  var setDataResult = localRenderer.setData(manager);
+
+  var api = {
+    setState: manager.setState.bind(manager),
+    setData: manager.setData.bind(manager),
+    p5: manager.p5,
+    data: manager.data
+  };
+
+  if (setDataResult && typeof setDataResult.then === 'function') {
+    api.ready = setDataResult.then(function () { return api; });
+  } else {
+    api.ready = Promise.resolve(api);
+  }
+
+  api.ready.then(function () {
+    try { window.__sketchAPI = api; } catch (e) { }
+  }).catch(function () {
+    try { window.__sketchAPI = api; } catch (e) { }
+  });
+
+  return api;
 }

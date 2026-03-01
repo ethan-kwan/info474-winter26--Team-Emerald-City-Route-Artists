@@ -2,88 +2,91 @@
 <html>
 
 <head>
-  <title>Scrolling Sections</title>
+  <title>Seattle Crash Hotspots — Interactive Article</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
   <link rel="stylesheet" type="text/css" href="css/style.css" />
 </head>
 
 <body>
-  <div class="container">
-    <div id='graphic'>
-      <div id='sections'>
-        <section class="step" data-active-index="0">
-          <div class="title">INFO 474 Final Project</div>
-          Here is a template to work on your final project.<br /><br />
-          Your mission is to create an <b>interactive article using P5.js</b>.
-        </section>
-        <section class="step" data-active-index="1">
-          <div class="title">Sections</div>
-          Note that each section in index.html corresponds to a section in the
-          scrolling article. You can add or remove sections as needed.
-        </section>
-        <section class="step" data-active-index="2">
-          <div class="title">No visualization</div>
-          You don't need to have a visualization for every section. Some sections may simply be text.
-        </section>
-        <section class="step" data-active-index="3">
-          <div class="title">Narrative</div>
-          These sections will tell a story. You can use them to explain the visualization, provide context,
-          or share insights.
-        </section>
-        <section class="step" data-active-index="4">
-          <div class="title">Be creative</div>
-          Surprise your readers with interesting interactions, animations, or data visualizations.
-        </section>
-        <section class="step" data-active-index="5">
-          <div class="title">Same visualization multiple sections</div>
-          Some visualizations may be relevant to multiple sections. You can reuse the same visualization
-          across different sections to reinforce key points. Or build on the previous visualization to just add on.
-        </section>
-        <div id="extra-space">
+  <div id="graphic">
+
+    <!-- FULL-WIDTH STICKY VIS -->
+    <div id="vis" class="vis-hidden"></div>
+
+    <!-- SCROLL STEPS (NO LEFT COLUMN) -->
+    <div id="sections">
+
+      <section class="step" data-active-index="0">
+        <div class="kicker">Seattle Crash Hotspots</div>
+        <div class="big-question">
+          Where in Seattle is crash risk concentrated — and what can you do about it?
         </div>
-        <section class="step" data-active-index="6">
-          <div class="title">Examples</div>
-          There is two examples in this code. One is a grid of circles that changes color
-          based on the section index. The other is a scatter plot and bar chart that
-          shows random data points. You can modify or replace these examples with your own visualizations.
-          Make sure you read both source files to understand how they work.
-        </section>
-        <section class="step" data-active-index="7">
-          <div class="title">Best of Luck in the Project!</div>
-          You are now ready to start building your interactive article. Good luck!
-        </section>
-      </div>
-      <div id='vis' class='vis-hidden'>
-      </div>
-      <div id="extra-space">
-      </div>
+        <div class="subtext">Scroll to start your route.</div>
+      </section>
+
+      <section class="step" data-active-index="1">
+        <div class="title">Stop 1</div>
+        <div class="step-body">Citywide hotspot overview (placeholder for now).</div>
+      </section>
+
+      <section class="step" data-active-index="2">
+        <div class="title">Stop 2</div>
+        <div class="step-body">Compare time windows (placeholder for now).</div>
+      </section>
+
+      <section class="step" data-active-index="3">
+        <div class="title">Stop 3</div>
+        <div class="step-body">Mode-based comparison (placeholder for now).</div>
+      </section>
+
+      <section class="step" data-active-index="4">
+        <div class="title">Stop 4</div>
+        <div class="step-body">Time-of-day / day-of-week (placeholder for now).</div>
+      </section>
+
+      <section class="step" data-active-index="5">
+        <div class="title">Stop 5</div>
+        <div class="step-body">Streets + interventions (placeholder for now).</div>
+      </section>
+
+      <section class="step" data-active-index="6">
+        <div class="title">Stop 6</div>
+        <div class="step-body">Personalized exploration (placeholder for now).</div>
+      </section>
+
+      <div class="end-spacer"></div>
     </div>
   </div>
 
-
-  <!-- p5.js (using CDN) -->
+  <!-- p5.js (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
-  <!-- helpers (data/loading, scroller, visual controller) -->
+
+  <!-- helpers -->
   <script src="js/helpers/data_loader.js"></script>
   <script src="js/helpers/scroller.js"></script>
   <script src="js/helpers/visual_controller.js"></script>
 
-  <!-- orchestrator (wires scroller -> sketch) -->
+  <!-- CONFIG -->
+  <script>
+    window.ScrollDemoConfig = {
+      showAt: 1,
+      trigger: 'center'
+    };
+  </script>
+
+  <!-- orchestrator -->
   <script src="js/helpers/sections.js"></script>
 
-  <!-- sketches (manager) -->
+  <!-- sketches -->
   <script src="js/sketches/sketch_manager.js"></script>
 
-  <!-- sketches (example renderer) -->
-  <script src="js/sketches/examples/sketch_grid.js"></script>
-
-  <!-- sketches (renderers): UPDATE HERE FOR PROJECT -->
+  <!-- viz -->
   <script src="js/sketches/viz/viz_title.js"></script>
-  <script src="js/sketches/viz/viz_scatter.js"></script>
-  <script src="js/sketches/viz/viz_bar.js"></script>
+  <script src="js/sketches/viz/viz_road.js"></script>
+
+  <!-- renderer -->
   <script src="js/sketches/sketch_renderer.js"></script>
-
-
 </body>
 
 </html>
