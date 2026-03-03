@@ -228,6 +228,26 @@ body.viz-open-stop3 #viz-controls-stop3 .viz-control:nth-child(4){
 body.viz-open-stop3 #viz-controls-stop3 select{
   border-radius: 12px;
 }
+
+/* Hero image on the intro step */
+.step > .hero-image{
+  max-width: 980px;
+  margin-top: 22px;
+}
+
+.hero-image img{
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+
+.hero-image figcaption{
+  margin-top: 10px;
+  font-size: 0.95rem;
+  color: rgba(0,0,0,0.65);
+}
 /* style.css — full-width scrollytelling layout */
 
 html, body {
