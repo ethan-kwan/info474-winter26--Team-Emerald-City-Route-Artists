@@ -25,7 +25,6 @@ function startP5() {
 
       // pin reset token so filters can clear pinned tooltip
       pinResetToken: 0
-      
     };
 
     this.data = {

@@ -1,15 +1,92 @@
-// viz_hotspots.js
-// Stop 1: Smooth heatmap using x/y (looks more like a real map heat layer)
-// Tooltip is detailed: top street/block, crash types, severity, injuries, flags, time bucket.
-// Filters: year + severity + mode + time (wired via manager.state)
-//
-// NOTE: True basemap roads like Image 2 needs street geometry or map tiles.
-// Here we approximate "street context" via LOCATION + top streets in tooltip.
-
 (function () {
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
-  // Space-saving topK (Misra–Gries style) for “heavy hitters”
+  function timeMatch(hour, filter) {
+    if (filter === 'all') return true;
+    if (hour === null || hour === undefined || isNaN(hour)) return false;
+    if (filter === 'morning') return (hour >= 5 && hour <= 10);
+    if (filter === 'midday') return (hour >= 11 && hour <= 15);
+    if (filter === 'evening') return (hour >= 16 && hour <= 20);
+    if (filter === 'night') return (hour >= 21 || hour <= 4);
+    return true;
+  }
+
+  function severityMatch(sevText, filter) {
+    sevText = (sevText || '').toLowerCase();
+    if (filter === 'fatal') return sevText.indexOf('fatal') >= 0;
+    if (filter === 'serious') return sevText.indexOf('serious') >= 0;
+    if (filter === 'injury') return (sevText.indexOf('injury') >= 0 && sevText.indexOf('serious') < 0);
+    if (filter === 'pdo') return (sevText.indexOf('property') >= 0 || sevText.indexOf('damage') >= 0);
+    return true;
+  }
+
+  function modeMatch(d, filter) {
+    if (filter === 'all') return true;
+    if (filter === 'ped') return !!d.isPed;
+    if (filter === 'bike') return !!d.isBike;
+    return true;
+  }
+
+  function formatPct(n, d) {
+    if (!d) return "0%";
+    return Math.round((n / d) * 100) + "%";
+  }
+
+  function parsePrimaryStreet(location) {
+    location = (location || '').trim();
+    if (!location) return '';
+    var betweenIdx = location.indexOf(' BETWEEN ');
+    if (betweenIdx >= 0) return location.slice(0, betweenIdx).trim();
+    var andIdx = location.indexOf(' AND ');
+    if (andIdx >= 0) return location.slice(0, andIdx).trim();
+    var ampIdx = location.indexOf(' & ');
+    if (ampIdx >= 0) return location.slice(0, ampIdx).trim();
+    return location.split('  ')[0].trim();
+  }
+
+  function parseCrossStreets(location) {
+    location = (location || '').trim();
+    if (!location) return '';
+    var betweenIdx = location.indexOf(' BETWEEN ');
+    if (betweenIdx >= 0) return location.slice(betweenIdx + ' BETWEEN '.length).trim();
+    var andIdx = location.indexOf(' AND ');
+    if (andIdx >= 0) return location.slice(andIdx + ' AND '.length).trim();
+    var ampIdx = location.indexOf(' & ');
+    if (ampIdx >= 0) return location.slice(ampIdx + ' & '.length).trim();
+    return '';
+  }
+
+  function makeAggKey(state) {
+    return [
+      state.filterYear || 'all',
+      state.filterSeverity || 'all',
+      state.filterMode || 'all',
+      state.filterTime || 'all'
+    ].join('|');
+  }
+
+  function mapInc(map, key) {
+    if (!key) return;
+    map[key] = (map[key] || 0) + 1;
+  }
+
+  function topN(map, n) {
+    var arr = [];
+    Object.keys(map || {}).forEach(function (k) {
+      arr.push({ key: k, count: map[k] });
+    });
+    arr.sort(function (a, b) { return b.count - a.count; });
+    return arr.slice(0, n || 5);
+  }
+
+  function shorten(s, maxLen) {
+    s = (s || '').trim();
+    maxLen = maxLen || 22;
+    if (s.length <= maxLen) return s;
+    return s.slice(0, maxLen - 1) + "…";
+  }
+
+  // Space-saving topK per-cell
   function topKUpdate(list, key, K) {
     if (!key) return;
     K = K || 5;
@@ -23,7 +100,6 @@
       return;
     }
 
-    // decrement all
     for (var j = list.length - 1; j >= 0; j--) {
       list[j].count -= 1;
       if (list[j].count <= 0) list.splice(j, 1);
@@ -36,112 +112,74 @@
     return copy;
   }
 
-  function parsePrimaryStreet(location) {
-    location = (location || '').trim();
-    if (!location) return '';
-
-    // "AURORA AVE N BETWEEN PROSPECT ST AND HIGHLAND DR"
-    var betweenIdx = location.indexOf(' BETWEEN ');
-    if (betweenIdx >= 0) return location.slice(0, betweenIdx).trim();
-
-    // intersection-like (common variants)
-    var andIdx = location.indexOf(' AND ');
-    if (andIdx >= 0) return location.slice(0, andIdx).trim();
-
-    var ampIdx = location.indexOf(' & ');
-    if (ampIdx >= 0) return location.slice(0, ampIdx).trim();
-
-    // fallback: first chunk
-    return location.split('  ')[0].trim();
+  function clampPan(view, map) {
+    var minTx = map.w - map.w * view.scale;
+    var minTy = map.h - map.h * view.scale;
+    view.tx = clamp(view.tx, minTx, 0);
+    view.ty = clamp(view.ty, minTy, 0);
   }
 
-  function parseCrossStreets(location) {
-    location = (location || '').trim();
-    if (!location) return '';
-
-    var betweenIdx = location.indexOf(' BETWEEN ');
-    if (betweenIdx >= 0) return location.slice(betweenIdx + ' BETWEEN '.length).trim();
-
-    var andIdx = location.indexOf(' AND ');
-    if (andIdx >= 0) return location.slice(andIdx + ' AND '.length).trim();
-
-    var ampIdx = location.indexOf(' & ');
-    if (ampIdx >= 0) return location.slice(ampIdx + ' & '.length).trim();
-
-    return '';
-  }
-
-  function severityMatch(sevText, filter) {
-    sevText = (sevText || '').toLowerCase();
-
-    if (filter === 'fatal') return sevText.indexOf('fatal') >= 0;
-    if (filter === 'serious') return sevText.indexOf('serious') >= 0;
-    if (filter === 'injury') return (sevText.indexOf('injury') >= 0 && sevText.indexOf('serious') < 0);
-    if (filter === 'pdo') return (sevText.indexOf('property') >= 0 || sevText.indexOf('damage') >= 0);
-
-    return true;
-  }
-
-  function timeMatch(hour, filter) {
-    if (filter === 'all') return true;
-    if (hour === null || hour === undefined || isNaN(hour)) return false;
-
-    // morning 5–10, midday 11–15, evening 16–20, night 21–4
-    if (filter === 'morning') return (hour >= 5 && hour <= 10);
-    if (filter === 'midday') return (hour >= 11 && hour <= 15);
-    if (filter === 'evening') return (hour >= 16 && hour <= 20);
-    if (filter === 'night') return (hour >= 21 || hour <= 4);
-
-    return true;
-  }
-
-  function modeMatch(d, filter) {
-    if (filter === 'all') return true;
-    if (filter === 'ped') return !!d.isPed;
-    if (filter === 'bike') return !!d.isBike;
-    return true;
-  }
-
-  function formatPct(n, d) {
-    if (d <= 0) return "0%";
-    return Math.round((n / d) * 100) + "%";
-  }
-
-  function makeAggKey(state) {
+  // -----------------------
+  // NEW: crash-type glossary
+  // -----------------------
+  function crashTypeGlossary() {
     return [
-      state.filterYear || 'all',
-      state.filterSeverity || 'all',
-      state.filterMode || 'all',
-      state.filterTime || 'all'
-    ].join('|');
+      { key: "Angles", desc: "Two vehicles collide at an angle (often at intersections / turning conflicts)." },
+      { key: "Rear Ended", desc: "One vehicle hits the back of another (often stop-and-go / following too closely)." },
+      { key: "Sideswipe", desc: "Vehicles scrape sides while traveling parallel or changing lanes." },
+      { key: "Head On", desc: "Front-to-front impact (often wrong-way / centerline crossing)." },
+      { key: "Left Turn", desc: "Crash involves a left-turn conflict (turning vehicle vs through traffic)." },
+      { key: "Right Turn", desc: "Crash involves a right-turn conflict (often at corners / merges)." },
+      { key: "Parked Car", desc: "Moving vehicle hits a parked vehicle." },
+      { key: "Pedestrian", desc: "Vehicle-pedestrian collision (crosswalks, mid-block crossings)." },
+      { key: "Cyclist", desc: "Vehicle-bicycle collision (bike lanes, crossings, dooring)." }
+    ];
   }
 
+  function glossaryLookup() {
+    var list = crashTypeGlossary();
+    var map = {};
+    for (var i = 0; i < list.length; i++) {
+      map[(list[i].key || "").toLowerCase()] = list[i].desc;
+    }
+    return map;
+  }
+
+  // -----------------------
+  // Viz
+  // -----------------------
   window.VizHotspots = {
     _layout: function (p) {
       var pad = 18;
       var topBannerH = 106;
+
       var left = pad;
       var top = pad + topBannerH;
       var w = p.width - pad * 2;
       var h = p.height - top - pad;
-      return { left: left, top: top, w: w, h: h, pad: pad, topBannerH: topBannerH };
+
+      var sidebarW = (w >= 980) ? 380 : 0;
+      var gap = (sidebarW > 0) ? 14 : 0;
+      var mapW = w - sidebarW - gap;
+
+      var map = { left: left, top: top, w: mapW, h: h };
+      var side = (sidebarW > 0) ? { left: left + mapW + gap, top: top, w: sidebarW, h: h } : null;
+
+      return { pad: pad, topBannerH: topBannerH, map: map, side: side, left: left };
     },
 
     _ensureAgg: function (manager) {
       manager.data.hotspotAggCache = manager.data.hotspotAggCache || {};
-
       var key = makeAggKey(manager.state);
       if (manager.data.hotspotAggCache[key]) return manager.data.hotspotAggCache[key];
 
       var all = manager.data.collisionsAll || [];
       var bounds = manager.data.bounds;
-
       if (!bounds || !all.length) {
         manager.data.hotspotAggCache[key] = { ready: false, error: "No data loaded." };
         return manager.data.hotspotAggCache[key];
       }
 
-      // bin resolution (tuned for “blobby heatmap”)
       var cols = 190;
       var rows = 190;
 
@@ -151,13 +189,25 @@
       var dx = (maxX - minX) || 1;
       var dy = (maxY - minY) || 1;
 
-      // cells stored sparsely in a map
-      var cellMap = {}; // "ix|iy" -> cell stats
+      var cellMap = {};
       var maxCount = 1;
 
-      // small sample for “street skeleton” effect
+      var summary = {
+        total: 0,
+        injuries: 0,
+        serious: 0,
+        fatal: 0,
+        ped: 0,
+        bike: 0,
+        speeding: 0,
+        inattn: 0,
+        underinfl: 0,
+        streets: {},
+        types: {}
+      };
+
       var samplePts = [];
-      var sampleTarget = 2000;
+      var sampleTarget = 2200;
       var seen = 0;
 
       function getCell(ix, iy) {
@@ -186,13 +236,10 @@
         return c;
       }
 
-      // Apply filters
       var yearFilter = manager.state.filterYear || 'all';
       var sevFilter = manager.state.filterSeverity || 'all';
       var modeFilter = manager.state.filterMode || 'all';
       var timeFilter = manager.state.filterTime || 'all';
-
-      var totalFiltered = 0;
 
       for (var i = 0; i < all.length; i++) {
         var d = all[i];
@@ -200,18 +247,27 @@
         if (yearFilter !== 'all') {
           if (String(d.year) !== String(yearFilter)) continue;
         }
-
         if (!severityMatch(d.severity, sevFilter)) continue;
         if (!modeMatch(d, modeFilter)) continue;
         if (!timeMatch(d.hour, timeFilter)) continue;
 
-        totalFiltered += 1;
+        summary.total += 1;
+        summary.injuries += (d.injuries || 0);
+        summary.serious += (d.serious || 0);
+        summary.fatal += (d.fatalities || 0);
 
-        // normalized in [0..1]
+        if (d.isPed) summary.ped += 1;
+        if (d.isBike) summary.bike += 1;
+        if (d.speeding) summary.speeding += 1;
+        if (d.inattn) summary.inattn += 1;
+        if (d.underinfl) summary.underinfl += 1;
+
+        var street = parsePrimaryStreet(d.location);
+        mapInc(summary.streets, street || "(Unknown street)");
+        mapInc(summary.types, d.collisionType || "(Unknown type)");
+
         var nx = (d.x - minX) / dx;
         var ny = (d.y - minY) / dy;
-
-        // clamp in case of edge weirdness
         nx = clamp(nx, 0, 0.999999);
         ny = clamp(ny, 0, 0.999999);
 
@@ -234,8 +290,7 @@
 
         if ((d.crosswalk_count || 0) > cell.maxCrosswalk) cell.maxCrosswalk = d.crosswalk_count || 0;
 
-        // heavy hitters
-        topKUpdate(cell.topStreets, parsePrimaryStreet(d.location), 5);
+        topKUpdate(cell.topStreets, street, 5);
         topKUpdate(cell.topTypes, d.collisionType, 5);
         topKUpdate(cell.topSev, d.severity, 4);
         topKUpdate(cell.topLoc, d.location, 3);
@@ -243,28 +298,34 @@
 
         if (cell.count > maxCount) maxCount = cell.count;
 
-        // sample points for context (reservoir-ish)
+        // sample points
         seen += 1;
         if (samplePts.length < sampleTarget) {
           samplePts.push({ x: d.x, y: d.y });
         } else {
-          // occasionally replace
           var r = Math.floor(Math.random() * seen);
           if (r < sampleTarget) samplePts[r] = { x: d.x, y: d.y };
         }
       }
 
-      // flatten cells to array + counts list for percentiles
       var cells = [];
       var counts = [];
+      var lookup = {};
 
       Object.keys(cellMap).forEach(function (k) {
         var c = cellMap[k];
         cells.push(c);
         counts.push(c.count);
+        lookup[c.ix + "|" + c.iy] = c;
       });
 
       counts.sort(function (a, b) { return a - b; });
+
+      var severe = summary.serious + summary.fatal;
+      summary.severe = severe;
+      summary.severePct = summary.total ? Math.round((severe / summary.total) * 100) : 0;
+      summary.topStreets = topN(summary.streets, 5);
+      summary.topTypes = topN(summary.types, 1);
 
       var agg = {
         ready: true,
@@ -277,7 +338,8 @@
         cells: cells,
         countsSorted: counts,
         samplePts: samplePts,
-        totalFiltered: totalFiltered
+        _cellLookup: lookup,
+        summary: summary
       };
 
       manager.data.hotspotAggCache[key] = agg;
@@ -287,16 +349,12 @@
     _percentileLabel: function (countsSorted, count) {
       if (!countsSorted || !countsSorted.length) return "";
       var n = countsSorted.length;
-
-      // find rightmost <= count
       var idx = 0;
       for (var i = 0; i < n; i++) {
         if (countsSorted[i] <= count) idx = i;
         else break;
       }
-
       var pct = (idx / Math.max(1, n - 1)) * 100;
-
       if (pct >= 99) return "Top 1% hotspot";
       if (pct >= 95) return "Top 5% hotspot";
       if (pct >= 90) return "Top 10% hotspot";
@@ -304,76 +362,142 @@
       return "Lower-density area";
     },
 
-    _screenFromXY: function (agg, layout, x, y) {
-      var nx = (x - agg.minX) / agg.dx;
-      var ny = (y - agg.minY) / agg.dy;
-      nx = clamp(nx, 0, 1);
-      ny = clamp(ny, 0, 1);
-
-      // invert Y so “north-ish” is up
-      var sx = layout.left + nx * layout.w;
-      var sy = layout.top + (1 - ny) * layout.h;
-
-      return { x: sx, y: sy };
-    },
-
-    _screenFromCellCenter: function (agg, layout, ix, iy) {
+    _cellCenterBase: function (agg, map, ix, iy) {
       var cx = (ix + 0.5) / agg.cols;
       var cy = (iy + 0.5) / agg.rows;
 
-      var sx = layout.left + cx * layout.w;
-      var sy = layout.top + (1 - cy) * layout.h; // invert
+      var baseX = cx * map.w;
+      var baseY = (1 - cy) * map.h;
 
-      return { x: sx, y: sy };
+      return { x: baseX, y: baseY };
     },
 
-    _hoverCell: function (p, agg, layout) {
-      var mx = p.mouseX;
-      var my = p.mouseY;
+    _mouseToBase: function (p, manager, map) {
+      var view = manager._hotspotView || { scale: 1, tx: 0, ty: 0 };
+      var bx = (p.mouseX - (map.left + view.tx)) / view.scale;
+      var by = (p.mouseY - (map.top + view.ty)) / view.scale;
+      return { x: bx, y: by };
+    },
 
-      if (mx < layout.left || mx > layout.left + layout.w) return null;
-      if (my < layout.top || my > layout.top + layout.h) return null;
+    _hoverCell: function (p, manager, agg, map) {
+      var b = this._mouseToBase(p, manager, map);
+      if (b.x < 0 || b.x > map.w) return null;
+      if (b.y < 0 || b.y > map.h) return null;
 
-      // convert mouse -> normalized
-      var nx = (mx - layout.left) / layout.w;
-      var nyInv = (my - layout.top) / layout.h;
-
+      var nx = b.x / map.w;
+      var nyInv = b.y / map.h;
       nx = clamp(nx, 0, 0.999999);
       nyInv = clamp(nyInv, 0, 0.999999);
 
       var ix = Math.floor(nx * agg.cols);
-      var iy = Math.floor((1 - nyInv) * agg.rows); // invert back
+      var iy = Math.floor((1 - nyInv) * agg.rows);
 
-      // find cell in sparse array (small map for quick lookup)
-      // build once per draw (cheap)
       var k = ix + "|" + iy;
-      return agg._cellLookup && agg._cellLookup[k] ? agg._cellLookup[k] : null;
+      return agg._cellLookup[k] ? agg._cellLookup[k] : null;
+    },
+
+    _screenFromBase: function (manager, map, baseX, baseY) {
+      var view = manager._hotspotView || { scale: 1, tx: 0, ty: 0 };
+      return {
+        x: map.left + view.tx + baseX * view.scale,
+        y: map.top + view.ty + baseY * view.scale
+      };
+    },
+
+    _handlePanAndDoubleClick: function (p, manager, map) {
+      manager._hotspotView = manager._hotspotView || { scale: 1, tx: 0, ty: 0 };
+      var view = manager._hotspotView;
+
+      if (manager._hotspotPrevPressed === undefined) manager._hotspotPrevPressed = false;
+      var justPressed = p.mouseIsPressed && !manager._hotspotPrevPressed;
+      var justReleased = !p.mouseIsPressed && manager._hotspotPrevPressed;
+      manager._hotspotPrevPressed = p.mouseIsPressed;
+
+      if (justPressed) {
+        var inside =
+          p.mouseX >= map.left && p.mouseX <= map.left + map.w &&
+          p.mouseY >= map.top && p.mouseY <= map.top + map.h;
+
+        manager._hotspotDragging = !!inside;
+        manager._hotspotLastMouse = { x: p.mouseX, y: p.mouseY };
+
+        var now = Date.now();
+        var last = manager._hotspotLastClickTs || 0;
+        if ((now - last) < 320 && inside) {
+          view.scale = 1;
+          view.tx = 0;
+          view.ty = 0;
+          manager._hotspotDragging = false;
+        }
+        manager._hotspotLastClickTs = now;
+      }
+
+      if (p.mouseIsPressed && manager._hotspotDragging) {
+        var prev = manager._hotspotLastMouse || { x: p.mouseX, y: p.mouseY };
+        var dx = p.mouseX - prev.x;
+        var dy = p.mouseY - prev.y;
+        manager._hotspotLastMouse = { x: p.mouseX, y: p.mouseY };
+
+        view.tx += dx;
+        view.ty += dy;
+
+        // allow slight slop
+        var minTx = map.w - map.w * view.scale;
+        var minTy = map.h - map.h * view.scale;
+        var slop = 18;
+        view.tx = clamp(view.tx, minTx - slop, 0 + slop);
+        view.ty = clamp(view.ty, minTy - slop, 0 + slop);
+      }
+
+      if (justReleased) {
+        manager._hotspotDragging = false;
+        clampPan(view, map);
+      }
+    },
+
+    _applyZoom: function (manager, map, factor) {
+      manager._hotspotView = manager._hotspotView || { scale: 1, tx: 0, ty: 0 };
+      var view = manager._hotspotView;
+
+      // zoom around map center (stable + simple)
+      var oldScale = view.scale;
+      var newScale = clamp(oldScale * factor, 1.0, 7.0);
+
+      var cx = map.w / 2;
+      var cy = map.h / 2;
+
+      // base coord at center before zoom
+      var baseX = (cx - view.tx) / oldScale;
+      var baseY = (cy - view.ty) / oldScale;
+
+      view.scale = newScale;
+      view.tx = cx - baseX * newScale;
+      view.ty = cy - baseY * newScale;
+
+      clampPan(view, map);
     },
 
     draw: function (p, manager) {
-      p.background(248, 249, 252);
+      var L = this._layout(p);
 
-      var layout = this._layout(p);
+      manager._hotspotView = manager._hotspotView || { scale: 1, tx: 0, ty: 0 };
+      var view = manager._hotspotView;
+
+      p.background(248, 249, 252);
 
       // Header strip
       p.push();
       p.noStroke();
       p.fill(255);
-      p.rect(0, 0, p.width, layout.topBannerH + 18);
+      p.rect(0, 0, p.width, L.topBannerH + 18);
       p.pop();
 
-      // If load error
       if (manager.data && manager.data.loadError) {
         p.push();
         p.fill(30);
         p.textAlign(p.CENTER, p.CENTER);
         p.textSize(14);
-        p.text(
-          "Couldn't load the CSV.\n\n" +
-          manager.data.loadError +
-          "\n\nFix: run with Live Server or `python3 -m http.server`.",
-          p.width / 2, p.height / 2
-        );
+        p.text("Couldn't load the CSV.\n\n" + manager.data.loadError, p.width / 2, p.height / 2);
         p.pop();
         return;
       }
@@ -389,102 +513,108 @@
         return;
       }
 
-      // build lookup for hover (fast)
-      if (!agg._cellLookup) {
-        var lookup = {};
-        for (var i = 0; i < agg.cells.length; i++) {
-          var c = agg.cells[i];
-          lookup[c.ix + "|" + c.iy] = c;
-        }
-        agg._cellLookup = lookup;
+      // reset pinned if filters changed
+      if (manager._pinResetSeen !== manager.state.pinResetToken) {
+        manager._pinResetSeen = manager.state.pinResetToken;
+        manager._pinnedCellKey = null;
       }
 
-      // Title + filter summary
-      var yText = 18;
-
+      // Title
       p.push();
       p.fill(18);
       p.textAlign(p.LEFT, p.TOP);
       p.textSize(18);
-      p.text("Stop 1 — Crash density (with street context)", layout.left, yText);
+      p.text("Stop 1 — Crash density (zoom + pan)", L.left, 18);
 
       p.fill(90);
       p.textSize(12);
-
       var filtersLine =
         "Filters: " +
         (manager.state.filterYear === 'all' ? "All years" : ("Year " + manager.state.filterYear)) + " · " +
         (manager.state.filterSeverity === 'all' ? "All severities" : manager.state.filterSeverity) + " · " +
         (manager.state.filterMode === 'all' ? "All modes" : manager.state.filterMode) + " · " +
         (manager.state.filterTime === 'all' ? "All day" : manager.state.filterTime) +
-        "  —  showing " + agg.totalFiltered + " crashes";
-      p.text(filtersLine, layout.left, yText + 26);
+        " — showing " + (agg.summary.total || 0) + " crashes";
+      p.text(filtersLine, L.left, 42);
 
-      p.fill(90);
-      p.text("Hover a hotspot for a detailed summary. Click to pin/unpin.", layout.left, yText + 46);
+      p.text("Drag to pan · Double-click to reset · Use zoom buttons (+ / −)", L.left, 62);
       p.pop();
 
-      // Background panel (map-like)
+      // Panels
       p.push();
       p.noStroke();
       p.fill(230);
-      p.rect(layout.left, layout.top, layout.w, layout.h, 14);
-      p.pop();
-
-      // “Street skeleton” context from sampled points (subtle)
-      p.push();
-      p.stroke(255, 255, 255, 80);
-      p.strokeWeight(1);
-
-      for (var sp = 0; sp < agg.samplePts.length; sp++) {
-        var pt = agg.samplePts[sp];
-        var sxy = this._screenFromXY(agg, layout, pt.x, pt.y);
-        p.point(sxy.x, sxy.y);
+      p.rect(L.map.left, L.map.top, L.map.w, L.map.h, 14);
+      if (L.side) {
+        p.fill(240);
+        p.rect(L.side.left, L.side.top, L.side.w, L.side.h, 14);
       }
       p.pop();
 
-      // Heat layer: draw “blobby” circles (two-pass: halo + core)
-      var maxCount = Math.max(1, agg.maxCount);
+      // Pan / dblclick
+      this._handlePanAndDoubleClick(p, manager, L.map);
 
-      var cellW = layout.w / agg.cols;
-      var cellH = layout.h / agg.rows;
+      // Draw map with transform
+      p.push();
+      p.translate(L.map.left + view.tx, L.map.top + view.ty);
+      p.scale(view.scale);
+
+      // skeleton
+      p.push();
+      p.stroke(255, 255, 255, 70);
+      p.strokeWeight(1);
+      for (var sp = 0; sp < agg.samplePts.length; sp++) {
+        var pt = agg.samplePts[sp];
+        var nx = (pt.x - agg.minX) / agg.dx;
+        var ny = (pt.y - agg.minY) / agg.dy;
+        nx = clamp(nx, 0, 1);
+        ny = clamp(ny, 0, 1);
+        var x = nx * L.map.w;
+        var y = (1 - ny) * L.map.h;
+        p.point(x, y);
+      }
+      p.pop();
+
+      // heat
+      var maxCount = Math.max(1, agg.maxCount);
+      var cellW = L.map.w / agg.cols;
+      var cellH = L.map.h / agg.rows;
       var baseR = Math.max(cellW, cellH);
 
       p.push();
       p.noStroke();
-
       for (var ci = 0; ci < agg.cells.length; ci++) {
         var c = agg.cells[ci];
-        var count = c.count;
-
-        // log scale for contrast
-        var t = Math.log(1 + count) / Math.log(1 + maxCount);
+        var t = Math.log(1 + c.count) / Math.log(1 + maxCount);
         t = clamp(t, 0, 1);
 
-        var center = this._screenFromCellCenter(agg, layout, c.ix, c.iy);
+        var center = this._cellCenterBase(agg, L.map, c.ix, c.iy);
 
-        // halo
+        // ✅ FIX: keep dot size constant on screen by dividing by view.scale
+        var rOuter = (baseR * 3.8) / view.scale;
+        var rInner = (baseR * 1.6) / view.scale;
+
         var a1 = 10 + Math.floor(70 * t);
         p.fill(0, 140, 255, a1);
-        p.ellipse(center.x, center.y, baseR * 3.8, baseR * 3.8);
+        p.ellipse(center.x, center.y, rOuter, rOuter);
 
-        // core
         var a2 = 28 + Math.floor(170 * t);
         p.fill(0, 90, 200, a2);
-        p.ellipse(center.x, center.y, baseR * 1.6, baseR * 1.6);
+        p.ellipse(center.x, center.y, rInner, rInner);
       }
       p.pop();
 
+      p.pop(); // end transform
+
       // Legend
       p.push();
-      var legX = layout.left;
-      var legY = layout.top - 24;
-      var legW = Math.min(260, layout.w * 0.34);
+      var legX = L.map.left;
+      var legY = L.map.top - 24;
+      var legW = Math.min(260, L.map.w * 0.45);
       var legH = 10;
 
       for (var px = 0; px < legW; px++) {
         var tt = px / Math.max(1, legW - 1);
-        // blend alpha across
         var alpha = 30 + Math.floor(180 * tt);
         p.stroke(0, 90, 200, alpha);
         p.line(legX + px, legY, legX + px, legY + legH);
@@ -499,71 +629,175 @@
       p.text("High", legX + legW, legY - 2);
       p.pop();
 
-      // pin reset (from filter changes)
-      if (manager._pinResetSeen !== manager.state.pinResetToken) {
-        manager._pinResetSeen = manager.state.pinResetToken;
-        manager._pinnedCellKey = null;
-      }
+      // Sidebar + buttons
+      if (L.side) {
+        var s = agg.summary || {};
+        var glossary = glossaryLookup();
 
-      // Determine hover
-      var hoverCell = this._hoverCell(p, agg, layout);
+        // define buttons
+        var btnReset = { x: L.side.left + 18, y: L.side.top + 18, w: L.side.w - 36, h: 34 };
+        var btnMinus = { x: L.side.left + 18, y: btnReset.y + btnReset.h + 12, w: (L.side.w - 44) / 2, h: 34 };
+        var btnPlus  = { x: btnMinus.x + btnMinus.w + 8, y: btnMinus.y, w: btnMinus.w, h: btnMinus.h };
 
-      // Click-to-pin (edge-detected)
-      var justPressed = p.mouseIsPressed && !manager._prevMousePressed;
-      if (justPressed) {
-        if (manager._pinnedCellKey) {
-          manager._pinnedCellKey = null;
-        } else if (hoverCell) {
-          manager._pinnedCellKey = hoverCell.ix + "|" + hoverCell.iy;
+        function inRect(mx, my, r) {
+          return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
         }
+
+        var hoverReset = inRect(p.mouseX, p.mouseY, btnReset);
+        var hoverMinus = inRect(p.mouseX, p.mouseY, btnMinus);
+        var hoverPlus = inRect(p.mouseX, p.mouseY, btnPlus);
+
+        // click handling (edge)
+        if (manager._qsPrevPressed === undefined) manager._qsPrevPressed = false;
+        var justPressed = p.mouseIsPressed && !manager._qsPrevPressed;
+        manager._qsPrevPressed = p.mouseIsPressed;
+
+        if (justPressed) {
+          if (hoverReset) { view.scale = 1; view.tx = 0; view.ty = 0; }
+          if (hoverMinus) { this._applyZoom(manager, L.map, 1 / 1.25); }
+          if (hoverPlus)  { this._applyZoom(manager, L.map, 1.25); }
+        }
+
+        // card
+        p.push();
+        p.noStroke();
+        p.fill(255, 255, 255, 235);
+        p.rect(L.side.left + 12, L.side.top + 12, L.side.w - 24, L.side.h - 24, 14);
+
+        // Reset button
+        p.fill(hoverReset ? 0 : 18, hoverReset ? 120 : 140, 255, hoverReset ? 230 : 215);
+        p.rect(btnReset.x, btnReset.y, btnReset.w, btnReset.h, 12);
+        p.fill(255);
+        p.textAlign(p.CENTER, p.CENTER);
+        p.textSize(12);
+        p.text("Reset view", btnReset.x + btnReset.w / 2, btnReset.y + btnReset.h / 2);
+
+        // +/- buttons
+        p.fill(hoverMinus ? 30 : 255, hoverMinus ? 150 : 255, hoverMinus ? 255 : 255, 220);
+        p.rect(btnMinus.x, btnMinus.y, btnMinus.w, btnMinus.h, 12);
+        p.fill(hoverMinus ? 255 : 18);
+        p.textSize(14);
+        p.text("−", btnMinus.x + btnMinus.w / 2, btnMinus.y + btnMinus.h / 2);
+
+        p.fill(hoverPlus ? 30 : 255, hoverPlus ? 150 : 255, hoverPlus ? 255 : 255, 220);
+        p.rect(btnPlus.x, btnPlus.y, btnPlus.w, btnPlus.h, 12);
+        p.fill(hoverPlus ? 255 : 18);
+        p.text("+", btnPlus.x + btnPlus.w / 2, btnPlus.y + btnPlus.h / 2);
+
+        // zoom readout
+        p.fill(90);
+        p.textSize(11);
+        p.textAlign(p.LEFT, p.TOP);
+        p.text("Zoom: " + view.scale.toFixed(2) + "×", L.side.left + 24, btnPlus.y + btnPlus.h + 10);
+
+        // stats
+        var y = btnPlus.y + btnPlus.h + 34;
+
+        p.fill(18);
+        p.textSize(14);
+        p.text("Quick stats (filtered)", L.side.left + 24, y);
+        y += 26;
+
+        p.fill(60);
+        p.textSize(12);
+        p.text("Total crashes: " + (s.total || 0), L.side.left + 24, y); y += 18;
+        p.text("Serious+Fatal: " + (s.severe || 0) + " (" + (s.severePct || 0) + "%)", L.side.left + 24, y); y += 18;
+
+        var topType = (s.topTypes && s.topTypes[0]) ? s.topTypes[0].key : "(Unknown type)";
+        p.text("Most common type: " + shorten(topType, 26), L.side.left + 24, y); y += 22;
+
+        // NEW: crash type key / glossary
+        p.fill(18);
+        p.textSize(13);
+        p.text("Crash type key:", L.side.left + 24, y);
+        y += 18;
+
+        p.fill(70);
+        p.textSize(11);
+
+        var keyList = crashTypeGlossary();
+        for (var ki = 0; ki < keyList.length; ki++) {
+          var kitem = keyList[ki];
+          if (y > (L.side.top + L.side.h - 120)) break; // don't overflow
+          p.text("• " + kitem.key + ": " + kitem.desc, L.side.left + 24, y);
+          y += 16;
+        }
+
+        y += 10;
+        p.fill(90);
+        p.textSize(12);
+        p.text("Top streets:", L.side.left + 24, y); y += 18;
+
+        p.fill(60);
+        p.textSize(12);
+        var topStreets = s.topStreets || [];
+        for (var i = 0; i < Math.min(5, topStreets.length); i++) {
+          var it = topStreets[i];
+          p.text((i + 1) + ". " + shorten(it.key, 24) + " (" + it.count + ")", L.side.left + 24, y);
+          y += 18;
+        }
+
+        y += 10;
+        p.fill(90);
+        p.textSize(11);
+        p.text("Tip: zoom in to inspect corridors like Aurora Ave N.", L.side.left + 24, y);
+
+        p.pop();
       }
-      manager._prevMousePressed = p.mouseIsPressed;
+
+      // Tooltip / pin
+      var hoverCell = this._hoverCell(p, manager, agg, L.map);
+
+      if (manager._prevMousePressedHotspot === undefined) manager._prevMousePressedHotspot = false;
+      var justPressed2 = p.mouseIsPressed && !manager._prevMousePressedHotspot;
+      manager._prevMousePressedHotspot = p.mouseIsPressed;
+
+      var clickInsideMap =
+        p.mouseX >= L.map.left && p.mouseX <= L.map.left + L.map.w &&
+        p.mouseY >= L.map.top && p.mouseY <= L.map.top + L.map.h;
+
+      if (justPressed2 && clickInsideMap) {
+        if (manager._pinnedCellKey) manager._pinnedCellKey = null;
+        else if (hoverCell) manager._pinnedCellKey = hoverCell.ix + "|" + hoverCell.iy;
+      }
 
       var active = null;
-      if (manager._pinnedCellKey && agg._cellLookup[manager._pinnedCellKey]) {
-        active = agg._cellLookup[manager._pinnedCellKey];
-      } else {
-        active = hoverCell;
-      }
+      if (manager._pinnedCellKey && agg._cellLookup[manager._pinnedCellKey]) active = agg._cellLookup[manager._pinnedCellKey];
+      else active = hoverCell;
 
       if (!active) return;
 
-      // Highlight active cell center marker
-      var cen = this._screenFromCellCenter(agg, layout, active.ix, active.iy);
+      var centerBase = this._cellCenterBase(agg, L.map, active.ix, active.iy);
+      var centerScreen = this._screenFromBase(manager, L.map, centerBase.x, centerBase.y);
+
       p.push();
       p.noFill();
       p.stroke(0, 90, 200, 220);
       p.strokeWeight(3);
-      p.ellipse(cen.x, cen.y, baseR * 2.2, baseR * 2.2);
+      p.ellipse(centerScreen.x, centerScreen.y, 18, 18);
       p.pop();
 
-      // Tooltip (DETAILED)
       var pinned = !!manager._pinnedCellKey;
 
-      var tipW = 380;
-      var tipH = 220;
+      var tipW = 390;
+      var tipH = 230;
 
-      var anchorX = pinned ? cen.x : p.mouseX;
-      var anchorY = pinned ? cen.y : p.mouseY;
+      var anchorX = pinned ? centerScreen.x : p.mouseX;
+      var anchorY = pinned ? centerScreen.y : p.mouseY;
 
-      var tipX = clamp(anchorX + 16, 16, p.width - tipW - 16);
-      var tipY = clamp(anchorY - tipH - 16, layout.topBannerH + 18, p.height - tipH - 16);
+      var rightLimit = L.side ? (L.side.left - 16) : (p.width - 16);
+      var tipX = clamp(anchorX + 16, 16, rightLimit - tipW);
+      var tipY = clamp(anchorY - tipH - 16, L.topBannerH + 18, p.height - tipH - 16);
 
-      // Shadow
+      // shadow + box
       p.push();
       p.noStroke();
       p.fill(0, 0, 0, 18);
       p.rect(tipX + 3, tipY + 4, tipW, tipH, 14);
-      p.pop();
-
-      // Box
-      p.push();
-      p.noStroke();
       p.fill(255);
       p.rect(tipX, tipY, tipW, tipH, 14);
       p.pop();
 
-      // Extract top items
       var streets = topKSorted(active.topStreets);
       var types = topKSorted(active.topTypes);
       var sevs = topKSorted(active.topSev);
@@ -572,67 +806,43 @@
 
       var topStreet = streets.length ? streets[0].key : "";
       var topLoc = locs.length ? locs[0].key : "";
-
       var cross = parseCrossStreets(topLoc);
-
-      // Percentile label
       var pctLabel = this._percentileLabel(agg.countsSorted, active.count);
 
-      // Draw tooltip text
       p.push();
       p.fill(18);
       p.textAlign(p.LEFT, p.TOP);
 
-      // Title row
       p.textSize(13);
-      var title = pinned ? "Hotspot summary (pinned)" : "Hotspot summary";
-      p.text(title, tipX + 14, tipY + 12);
+      p.text(pinned ? "Hotspot summary (pinned)" : "Hotspot summary", tipX + 14, tipY + 12);
 
       p.fill(90);
       p.textSize(11);
       p.text(pctLabel, tipX + 14, tipY + 32);
 
-      // Street context
       p.fill(18);
       p.textSize(12);
-      if (topStreet) {
-        p.text("Primary street: " + topStreet, tipX + 14, tipY + 54);
-      } else {
-        p.text("Primary street: (unknown)", tipX + 14, tipY + 54);
-      }
+      p.text("Primary street: " + (topStreet || "(unknown)"), tipX + 14, tipY + 54);
 
       p.fill(60);
       p.textSize(11);
-      if (topLoc) {
-        p.text("Example block: " + topLoc, tipX + 14, tipY + 72);
-      }
+      if (topLoc) p.text("Example block: " + topLoc, tipX + 14, tipY + 72);
+      if (cross) p.text("Cross streets: " + cross, tipX + 14, tipY + 88);
 
-      if (cross) {
-        p.text("Cross streets: " + cross, tipX + 14, tipY + 88);
-      }
-
-      // Key metrics
       p.fill(18);
       p.textSize(12);
       p.text("Crashes: " + active.count, tipX + 14, tipY + 110);
 
       p.fill(60);
       p.textSize(11);
-      p.text(
-        "Injuries: " + active.injuries +
-        "   Serious: " + active.serious +
-        "   Fatal: " + active.fatalities,
-        tipX + 14, tipY + 126
-      );
+      p.text("Injuries: " + active.injuries + "   Serious: " + active.serious + "   Fatal: " + active.fatalities, tipX + 14, tipY + 126);
 
-      // Mode share
       p.text(
         "Ped-involved: " + active.ped + " (" + formatPct(active.ped, active.count) + ")" +
         "   Bike-involved: " + active.bike + " (" + formatPct(active.bike, active.count) + ")",
         tipX + 14, tipY + 142
       );
 
-      // Risk flags
       p.text(
         "Flags: Speeding " + formatPct(active.speeding, active.count) +
         " · Inattention " + formatPct(active.inattn, active.count) +
@@ -640,16 +850,14 @@
         tipX + 14, tipY + 158
       );
 
-      // Crosswalk context
       p.text("Crosswalks in cell (max): " + active.maxCrosswalk, tipX + 14, tipY + 174);
 
-      // Top crash type + severity + hour
       var typeLine = types.length ? (types[0].key || "(unknown)") : "(unknown)";
       var sevLine = sevs.length ? (sevs[0].key || "(unknown)") : "(unknown)";
       var hourLine = hours.length ? (hours[0].key + ":00") : "(unknown)";
 
-      p.text("Most common type: " + typeLine, tipX + 14, tipY + 190);
-      p.text("Most common severity: " + sevLine + "   ·   Common hour: " + hourLine, tipX + 14, tipY + 206);
+      p.text("Most common type: " + typeLine, tipX + 14, tipY + 192);
+      p.text("Most common severity: " + sevLine + "   ·   Common hour: " + hourLine, tipX + 14, tipY + 208);
 
       p.pop();
     }
