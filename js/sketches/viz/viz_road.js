@@ -203,17 +203,38 @@
     _drawCar: function (p, manager, tCar) {
       var c = this._centerAt(manager, tCar);
 
+      // lazy-load the car icon image once and reuse
+      if (!manager._carIcon && !manager._carIconLoading && p.loadImage) {
+        manager._carIconLoading = true;
+        p.loadImage(
+          'assets/car-icon.png',
+          function (img) {
+            manager._carIcon = img;
+            manager._carIconLoading = false;
+          },
+          function () {
+            manager._carIconLoading = false;
+          }
+        );
+      }
+
       p.push();
       p.noStroke();
 
-      p.fill(0, 0, 0, 18);
-      p.ellipse(c.x + 3, c.y + 4, 24, 24);
+      // soft shadow under the car
+      p.fill(0, 0, 0, 40);
+      p.ellipse(c.x + 4, c.y + 6, 30, 14);
 
-      p.fill(0, 140, 255);
-      p.ellipse(c.x, c.y, 22, 22);
-
-      p.fill(255, 255, 255, 170);
-      p.ellipse(c.x - 5, c.y - 5, 8, 8);
+      if (manager._carIcon) {
+        var iconW = 80;
+        var iconH = 80;
+        p.imageMode(p.CENTER);
+        p.image(manager._carIcon, c.x, c.y, iconW, iconH);
+      } else {
+        // fallback while the image is loading
+        p.fill(0, 140, 255);
+        p.ellipse(c.x, c.y, 22, 22);
+      }
 
       p.pop();
     },
