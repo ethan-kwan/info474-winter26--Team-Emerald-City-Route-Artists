@@ -18,8 +18,14 @@ function startP5() {
       filterMode: 'all',
       filterTime: 'all',
 
+      affectYear: 'all',
+      affectTime: 'all',
+      affectMetric: 'percent',
+      affectPinResetToken: 0,
+
       // pin reset token so filters can clear pinned tooltip
       pinResetToken: 0
+      
     };
 
     this.data = {
@@ -86,6 +92,11 @@ function startP5() {
     if (s.filterTime !== undefined) this.state.filterTime = s.filterTime;
 
     if (s.pinResetToken !== undefined) this.state.pinResetToken = s.pinResetToken;
+
+    if (s.affectYear !== undefined) this.state.affectYear = s.affectYear;
+    if (s.affectTime !== undefined) this.state.affectTime = s.affectTime;
+    if (s.affectMetric !== undefined) this.state.affectMetric = s.affectMetric;
+    if (s.affectPinResetToken !== undefined) this.state.affectPinResetToken = s.affectPinResetToken;
   };
 
   SketchManager.prototype.setData = function (newData) {

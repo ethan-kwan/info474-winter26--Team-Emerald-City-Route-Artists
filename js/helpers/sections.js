@@ -17,12 +17,24 @@
     window.__vizUI = { open: false, stop: null };
     window.__activeStop = 0;
 
-    // Filter state (Stop 1)
+    // ----------------------------
+    // Stop 1 filter state
+    // ----------------------------
     window.__vizFilters = {
       year: 'all',
       severity: 'all',
       mode: 'all',
       time: 'all',
+      pinResetToken: 0
+    };
+
+    // ----------------------------
+    // Stop 3 filter state
+    // ----------------------------
+    window.__affectFilters = {
+      year: 'all',
+      time: 'all',
+      metric: 'percent',
       pinResetToken: 0
     };
 
@@ -37,7 +49,7 @@
       });
     }
 
-    function pushFiltersToSketch() {
+    function pushStop1FiltersToSketch() {
       if (window.__sketchAPI && window.__sketchAPI.setState) {
         window.__sketchAPI.setState({
           filterYear: window.__vizFilters.year,
@@ -49,24 +61,44 @@
       }
     }
 
-    function setVizOpen(open, stop) 
-    {
-        window.__vizUI.open = !!open;
-        window.__vizUI.stop = open ? stop : null;
-
-        document.body.classList.toggle('viz-open-stop1', window.__vizUI.open && window.__vizUI.stop === 1);
-
-        if (window.__sketchAPI && window.__sketchAPI.setState) {
-            window.__sketchAPI.setState({
-            openViz: window.__vizUI.open,
-            openVizFor: window.__vizUI.stop
-            });
-        }
-
-        updateToggleButtons();
-        pushFiltersToSketch();
+    function pushStop3FiltersToSketch() {
+      if (window.__sketchAPI && window.__sketchAPI.setState) {
+        window.__sketchAPI.setState({
+          affectYear: window.__affectFilters.year,
+          affectTime: window.__affectFilters.time,
+          affectMetric: window.__affectFilters.metric,
+          affectPinResetToken: window.__affectFilters.pinResetToken
+        });
+      }
     }
 
+    function pushAllFiltersToSketch() {
+      pushStop1FiltersToSketch();
+      pushStop3FiltersToSketch();
+    }
+
+    function setVizOpen(open, stop) {
+      window.__vizUI.open = !!open;
+      window.__vizUI.stop = open ? stop : null;
+
+      // body classes (controls visibility)
+      document.body.classList.toggle('viz-open-stop1', window.__vizUI.open && window.__vizUI.stop === 1);
+      document.body.classList.toggle('viz-open-stop3', window.__vizUI.open && window.__vizUI.stop === 3);
+
+      if (window.__sketchAPI && window.__sketchAPI.setState) {
+        window.__sketchAPI.setState({
+          openViz: window.__vizUI.open,
+          openVizFor: window.__vizUI.stop
+        });
+      }
+
+      updateToggleButtons();
+      pushAllFiltersToSketch();
+    }
+
+    // ----------------------------
+    // Stop 1 controls
+    // ----------------------------
     function readStop1Controls() {
       var yearEl = document.getElementById('filter-year');
       var sevEl = document.getElementById('filter-severity');
@@ -85,19 +117,42 @@
 
       container.addEventListener('change', function () {
         readStop1Controls();
-
-        // Clear any pinned tooltip when filters change
-        window.__vizFilters.pinResetToken += 1;
-
-        pushFiltersToSketch();
+        window.__vizFilters.pinResetToken += 1; // clear pinned tooltip
+        pushStop1FiltersToSketch();
       });
 
-      // initialize
       readStop1Controls();
-      pushFiltersToSketch();
+      pushStop1FiltersToSketch();
     }
 
-    // If we’re hiding the canvas until showAt
+    // ----------------------------
+    // Stop 3 controls
+    // ----------------------------
+    function readStop3Controls() {
+      var yearEl = document.getElementById('affect-year');
+      var timeEl = document.getElementById('affect-time');
+      var metricEl = document.getElementById('affect-metric');
+
+      if (yearEl) window.__affectFilters.year = yearEl.value || 'all';
+      if (timeEl) window.__affectFilters.time = timeEl.value || 'all';
+      if (metricEl) window.__affectFilters.metric = metricEl.value || 'percent';
+    }
+
+    function wireStop3Controls() {
+      var container = document.getElementById('viz-controls-stop3');
+      if (!container) return;
+
+      container.addEventListener('change', function () {
+        readStop3Controls();
+        window.__affectFilters.pinResetToken += 1; // clear pinned tooltip
+        pushStop3FiltersToSketch();
+      });
+
+      readStop3Controls();
+      pushStop3FiltersToSketch();
+    }
+
+    // Hide canvas until showAt
     try {
       var visStartEl = document.querySelector(cfg.visSelector);
       if (visStartEl && (cfg.showAt || 0) > 0) {
@@ -105,7 +160,7 @@
       }
     } catch (e) { }
 
-    // Wire button clicks (event delegation)
+    // Open/close viz buttons (delegated)
     document.addEventListener('click', function (e) {
       var btn = e.target && e.target.closest ? e.target.closest('[data-viz-toggle]') : null;
       if (!btn) return;
@@ -130,16 +185,18 @@
             api.ready.then(function () {
               try { if (api && api.setState) window.__sketchAPI = api; } catch (e) { }
               wireStop1Controls();
+              wireStop3Controls();
               updateToggleButtons();
-              pushFiltersToSketch();
+              pushAllFiltersToSketch();
             }).catch(function () {
               if (api && api.setState) window.__sketchAPI = api;
             });
           } else {
             if (api && api.setState) window.__sketchAPI = api;
             wireStop1Controls();
+            wireStop3Controls();
             updateToggleButtons();
-            pushFiltersToSketch();
+            pushAllFiltersToSketch();
           }
 
           var ScrollerCtor = window.Scroller;
@@ -154,12 +211,14 @@
           }
 
           sc.on('active', function (index) {
+            // only show active step
             var stepEls = document.querySelectorAll(cfg.stepSelector);
             stepEls.forEach(function (el, i) {
               if (i === index) el.classList.add('is-active');
               else el.classList.remove('is-active');
             });
 
+            // map active index
             var mappedIndex = index;
             try {
               var stepEl = (sc.steps && sc.steps[index]) ? sc.steps[index] : stepEls[index];
@@ -171,7 +230,7 @@
 
             window.__activeStop = mappedIndex;
 
-            // When entering a stop, default back to ROAD
+            // entering a new stop defaults back to route
             setVizOpen(false, null);
 
             if (window.__sketchAPI && window.__sketchAPI.setState) {

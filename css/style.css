@@ -207,3 +207,8 @@ html, body {
 body.viz-open-stop1 #viz-controls-stop1{
   display: grid;
 }
+
+/* show Stop 3 controls only when Stop 3 viz is open */
+body.viz-open-stop3 #viz-controls-stop3{
+  display: grid;
+}

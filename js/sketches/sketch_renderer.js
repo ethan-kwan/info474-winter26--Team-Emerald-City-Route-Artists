@@ -34,9 +34,9 @@
         return Promise.resolve(manager.data);
       }
 
-      // Only pick what we need for Stop 1 (keeps loading fast)
+      // Columns needed for Stop 1 + Stop 3
       var cols = [
-        'x','y','Year','Month','Hour',
+        'x','y','Year','Hour',
         'LOCATION','COLLISIONTYPE','SEVERITYDESC',
         'INJURIES','SERIOUSINJURIES','FATALITIES',
         'IsPedCrash','IsBikeCrash',
@@ -50,7 +50,7 @@
 
           manager.data.collisionsAll = cleaned;
 
-          // compute global bounds once (stable “map”)
+          // bounds for Stop 1 heatmap
           var minX = Infinity, maxX = -Infinity;
           var minY = Infinity, maxY = -Infinity;
 
@@ -63,7 +63,10 @@
           }
 
           manager.data.bounds = { minX: minX, maxX: maxX, minY: minY, maxY: maxY };
-          manager.data.hotspotAggCache = {}; // clear cache on reload
+
+          // clear caches when data reloads
+          manager.data.hotspotAggCache = {};
+          manager.data.affectedCache = {};
 
           return manager.data;
         })
@@ -75,35 +78,47 @@
     },
 
     draw: function (p, manager, ai, progress) {
+      // Title screen
       if (ai === 0) {
         if (window.VizTitle && window.VizTitle.draw) window.VizTitle.draw(p, manager, ai, progress);
         else p.background(255);
         return;
       }
 
+      // Stops 1..6
       if (ai >= 1 && ai <= 6) {
         var open = !!manager.state.openViz;
         var openFor = manager.state.openVizFor;
 
+        // If user opened this stop's visualization
         if (open && openFor === ai) {
+
+          // Stop 1 heatmap
           if (ai === 1) {
-            if (window.VizHotspots && window.VizHotspots.draw) {
-              window.VizHotspots.draw(p, manager);
-            } else {
-              drawPlaceholder(p, manager, 1);
-            }
+            if (window.VizHotspots && window.VizHotspots.draw) window.VizHotspots.draw(p, manager);
+            else drawPlaceholder(p, manager, 1);
             return;
           }
 
+          // Stop 3 affected stacked bars
+          if (ai === 3) {
+            if (window.VizAffected && window.VizAffected.draw) window.VizAffected.draw(p, manager);
+            else drawPlaceholder(p, manager, 3);
+            return;
+          }
+
+          // Other stops not implemented
           drawPlaceholder(p, manager, ai);
           return;
         }
 
+        // Default route view
         if (window.VizRoad && window.VizRoad.draw) window.VizRoad.draw(p, manager, ai, progress);
         else p.background(255);
         return;
       }
 
+      // Fallback
       if (window.VizRoad && window.VizRoad.draw) window.VizRoad.draw(p, manager, 6, progress);
       else p.background(255);
     }

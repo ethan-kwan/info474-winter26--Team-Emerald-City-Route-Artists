@@ -103,7 +103,48 @@
           <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="3">
             Open visualization
           </button>
-          <div class="viz-note">(Coming soon) Compare crash types / modes.</div>
+          <div class="viz-note">Compare severity outcomes across pedestrians, cyclists, and other crashes.</div>
+
+          <!-- Stop 3 Controls (hidden until viz opens) -->
+          <div class="viz-controls" id="viz-controls-stop3">
+            <div class="viz-control">
+              <label for="affect-year">Year</label>
+              <select id="affect-year">
+                <option value="all">All (2022–2026)</option>
+                <option value="2022">2022</option>
+                <option value="2023">2023</option>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+              </select>
+            </div>
+
+            <div class="viz-control">
+              <label for="affect-time">Time</label>
+              <select id="affect-time">
+                <option value="all">All day</option>
+                <option value="morning">Morning (5–10)</option>
+                <option value="midday">Midday (11–15)</option>
+                <option value="evening">Evening (16–20)</option>
+                <option value="night">Night (21–4)</option>
+              </select>
+            </div>
+
+            <div class="viz-control">
+              <label for="affect-metric">Metric</label>
+              <select id="affect-metric">
+                <option value="percent">Percent</option>
+                <option value="count">Count</option>
+              </select>
+            </div>
+
+            <div class="viz-control">
+              <label>Tip</label>
+              <div style="font-size:0.9rem;color:rgba(0,0,0,.65);line-height:1.2;">
+                Hover a segment for details. Click to pin.
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -174,6 +215,7 @@
   <script src="js/sketches/viz/viz_title.js"></script>
   <script src="js/sketches/viz/viz_road.js"></script>
   <script src="js/sketches/viz/viz_hotspots.js"></script>
+  <script src="js/sketches/viz/viz_affected.js"></script>
 
   <!-- renderer -->
   <script src="js/sketches/sketch_renderer.js"></script>
