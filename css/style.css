@@ -458,3 +458,216 @@ body.viz-open-stop3 #viz-controls-stop3 .viz-control:nth-child(4){
 body.viz-open-stop3 #viz-controls-stop3 select{
   border-radius: 12px;
 }
+
+/* style.css — full-width scrollytelling layout */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #f8f9fc;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+#graphic {
+  position: relative;
+  width: 100%;
+}
+
+/* Sticky full-screen visualization */
+#vis {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  transition: opacity 220ms ease;
+}
+
+.vis-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vis-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Steps overlay the vis */
+#sections {
+  position: relative;
+  z-index: 2;
+  margin-top: -100vh;
+}
+
+/* Each step is a full-screen “chapter” */
+.step {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+
+  padding: 120px 18px 60px 18px;
+  box-sizing: border-box;
+
+  /* hide all steps by default */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+
+/* Show ONLY the active step */
+.step.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Prevent initial flash before JS sets active */
+.step:first-child {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Keep text readable but not a giant left column */
+.step > * {
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+/* Text styles */
+.kicker {
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 10px;
+}
+
+.big-question {
+  font-size: 38px;
+  font-weight: 750;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.subtext {
+  margin-top: 14px;
+  font-size: 15px;
+  opacity: 0.72;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  opacity: 0.9;
+  margin-bottom: 10px;
+}
+
+/* ✅ Force-hide any leftover step-question elements */
+.step-question {
+  display: none !important;
+}
+
+.step-body {
+  font-size: 16px;
+  opacity: 0.75;
+  line-height: 1.45;
+}
+
+/* Extra scroll padding at the end */
+.end-spacer {
+  height: 60vh;
+}
+
+/* Stop "Open visualization" block */
+.viz-cta{
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 720px;
+}
+
+.viz-note{
+  font-size: 0.95rem;
+  color: rgba(0,0,0,0.65);
+}
+
+.viz-toggle.is-open{
+  opacity: 0.92;
+}
+
+/* NEW: filter controls */
+.viz-controls{
+  display: none; /* 👈 hide until viz opens */
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 10px 14px;
+  padding: 12px;
+  background: rgba(255,255,255,0.92);
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+.viz-control{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.viz-control label{
+  font-size: 0.85rem;
+  color: rgba(0,0,0,0.7);
+  font-weight: 600;
+}
+
+.viz-control select{
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: white;
+}
+
+/* only show filters when Stop 1 visualization is open */
+body.viz-open-stop1 #viz-controls-stop1{
+  display: grid;
+}
+
+/* ✅ NEW: show Stop 2 controls only when Stop 2 viz is open */
+body.viz-open-stop2 #viz-controls-stop2{
+  display: grid;
+}
+
+/* Stop 2 controls: slightly wider grid on desktop */
+body.viz-open-stop2 #viz-controls-stop2{
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  max-width: 680px;
+}
+
+/* show Stop 3 controls only when Stop 3 viz is open */
+body.viz-open-stop3 #viz-controls-stop3{
+  display: grid;
+}
+
+/* Stop 3 controls: tighter + modern */
+body.viz-open-stop3 #viz-controls-stop3{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 10px 12px;
+  max-width: 680px;
+}
+
+body.viz-open-stop3 #viz-controls-stop3 .viz-control:nth-child(4){
+  grid-column: 1 / -1;
+}
+
+body.viz-open-stop3 #viz-controls-stop3 select{
+  border-radius: 12px;
+}

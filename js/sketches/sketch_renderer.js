@@ -1,4 +1,3 @@
-// sketch_renderer.js
 (function () {
   function drawPlaceholder(p, manager, stopNum) {
     p.background(248, 249, 252);
@@ -34,14 +33,14 @@
         return Promise.resolve(manager.data);
       }
 
-      // Columns needed for Stop 1 + Stop 3
+      // Columns needed for Stop 1 + Stop 2 + Stop 3
       var cols = [
         'x','y','Year','Hour',
         'LOCATION','COLLISIONTYPE','SEVERITYDESC',
         'INJURIES','SERIOUSINJURIES','FATALITIES',
         'IsPedCrash','IsBikeCrash',
         'SPEEDING','INATTENTIONIND','UNDERINFL',
-        'crosswalk_count'
+        'crosswalk_count', 'WEATHER','ROADCOND','LIGHTCOND',
       ];
 
       return window.DataLoader.loadCSVPick(collisionsUrl, cols)
@@ -66,6 +65,7 @@
 
           // clear caches when data reloads
           manager.data.hotspotAggCache = {};
+          manager.data.driversCache = {};   // ✅ NEW
           manager.data.affectedCache = {};
 
           return manager.data;
@@ -97,6 +97,13 @@
           if (ai === 1) {
             if (window.VizHotspots && window.VizHotspots.draw) window.VizHotspots.draw(p, manager);
             else drawPlaceholder(p, manager, 1);
+            return;
+          }
+
+          // ✅ Stop 2 drivers
+          if (ai === 2) {
+            if (window.VizDrivers && window.VizDrivers.draw) window.VizDrivers.draw(p, manager);
+            else drawPlaceholder(p, manager, 2);
             return;
           }
 

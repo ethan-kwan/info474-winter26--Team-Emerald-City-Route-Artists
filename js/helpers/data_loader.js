@@ -116,6 +116,10 @@
         year: yr,
         hour: hr,
 
+        weather: (r.WEATHER || '').trim(),
+        roadcond: (r.ROADCOND || '').trim(),
+        lightcond: (r.LIGHTCOND || '').trim(),
+
         location: (r.LOCATION || '').trim(),
         collisionType: (r.COLLISIONTYPE || '').trim(),
         severity: (r.SEVERITYDESC || '').trim(),

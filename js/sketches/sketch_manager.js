@@ -12,26 +12,34 @@ function startP5() {
       openViz: false,
       openVizFor: null,
 
-      // NEW filters (Stop 1)
+      // Stop 1
       filterYear: 'all',
       filterSeverity: 'all',
       filterMode: 'all',
       filterTime: 'all',
+      pinResetToken: 0,
 
+      // ✅ Stop 2 (drivers)
+      driverYear: 'all',
+      driverMode: 'all',
+      driverTime: 'all',
+      driverScope: 'all', // all | severe
+      driverFactor: 'weather',
+
+      // Stop 3
       affectYear: 'all',
       affectTime: 'all',
       affectMetric: 'percent',
-      affectPinResetToken: 0,
-
-      // pin reset token so filters can clear pinned tooltip
-      pinResetToken: 0
+      affectPinResetToken: 0
     };
 
     this.data = {
       collisionsAll: [],
       bounds: null,
       loadError: null,
-      hotspotAggCache: {}
+      hotspotAggCache: {},
+      affectedCache: {},
+      driversCache: {} // ✅ NEW
     };
 
     this._computeSize = function () {
@@ -85,13 +93,21 @@ function startP5() {
     if (s.openViz !== undefined) this.state.openViz = !!s.openViz;
     if (s.openVizFor !== undefined) this.state.openVizFor = s.openVizFor;
 
+    // Stop 1
     if (s.filterYear !== undefined) this.state.filterYear = s.filterYear;
     if (s.filterSeverity !== undefined) this.state.filterSeverity = s.filterSeverity;
     if (s.filterMode !== undefined) this.state.filterMode = s.filterMode;
     if (s.filterTime !== undefined) this.state.filterTime = s.filterTime;
-
     if (s.pinResetToken !== undefined) this.state.pinResetToken = s.pinResetToken;
 
+    // ✅ Stop 2
+    if (s.driverYear !== undefined) this.state.driverYear = s.driverYear;
+    if (s.driverMode !== undefined) this.state.driverMode = s.driverMode;
+    if (s.driverTime !== undefined) this.state.driverTime = s.driverTime;
+    if (s.driverScope !== undefined) this.state.driverScope = s.driverScope;
+    if (s.driverFactor !== undefined) this.state.driverFactor = s.driverFactor;
+
+    // Stop 3
     if (s.affectYear !== undefined) this.state.affectYear = s.affectYear;
     if (s.affectTime !== undefined) this.state.affectTime = s.affectTime;
     if (s.affectMetric !== undefined) this.state.affectMetric = s.affectMetric;

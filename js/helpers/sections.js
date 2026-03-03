@@ -1,4 +1,3 @@
-// sections.js
 (function () {
   function displayData() {
     var defaults = {
@@ -26,6 +25,17 @@
       mode: 'all',
       time: 'all',
       pinResetToken: 0
+    };
+
+    // ----------------------------
+    // ✅ Stop 2 filter state (drivers)
+    // ----------------------------
+    window.__driverFilters = {
+      factor: 'weather',
+      year: 'all',
+      mode: 'all',
+      time: 'all',
+      scope: 'all' // all | severe
     };
 
     // ----------------------------
@@ -61,6 +71,19 @@
       }
     }
 
+    // ✅ Stop 2 → sketch state
+    function pushStop2FiltersToSketch() {
+      if (window.__sketchAPI && window.__sketchAPI.setState) {
+        window.__sketchAPI.setState({
+          driverYear: window.__driverFilters.year,
+          driverMode: window.__driverFilters.mode,
+          driverTime: window.__driverFilters.time,
+          driverScope: window.__driverFilters.scope,
+          driverFactor: window.__driverFilters.factor
+        });
+      }
+    }
+
     function pushStop3FiltersToSketch() {
       if (window.__sketchAPI && window.__sketchAPI.setState) {
         window.__sketchAPI.setState({
@@ -74,6 +97,7 @@
 
     function pushAllFiltersToSketch() {
       pushStop1FiltersToSketch();
+      pushStop2FiltersToSketch(); // ✅ NEW
       pushStop3FiltersToSketch();
     }
 
@@ -83,6 +107,7 @@
 
       // body classes (controls visibility)
       document.body.classList.toggle('viz-open-stop1', window.__vizUI.open && window.__vizUI.stop === 1);
+      document.body.classList.toggle('viz-open-stop2', window.__vizUI.open && window.__vizUI.stop === 2); // ✅ NEW
       document.body.classList.toggle('viz-open-stop3', window.__vizUI.open && window.__vizUI.stop === 3);
 
       if (window.__sketchAPI && window.__sketchAPI.setState) {
@@ -123,6 +148,36 @@
 
       readStop1Controls();
       pushStop1FiltersToSketch();
+    }
+
+    // ----------------------------
+    // ✅ Stop 2 controls
+    // ----------------------------
+    function readStop2Controls() {
+      var yearEl = document.getElementById('driver-year');
+      var modeEl = document.getElementById('driver-mode');
+      var timeEl = document.getElementById('driver-time');
+      var scopeEl = document.getElementById('driver-scope');
+      var factorEl = document.getElementById('driver-factor');
+    
+      if (factorEl) window.__driverFilters.factor = factorEl.value || 'weather';
+      if (yearEl) window.__driverFilters.year = yearEl.value || 'all';
+      if (modeEl) window.__driverFilters.mode = modeEl.value || 'all';
+      if (timeEl) window.__driverFilters.time = timeEl.value || 'all';
+      if (scopeEl) window.__driverFilters.scope = scopeEl.value || 'all';
+    }
+
+    function wireStop2Controls() {
+      var container = document.getElementById('viz-controls-stop2');
+      if (!container) return;
+
+      container.addEventListener('change', function () {
+        readStop2Controls();
+        pushStop2FiltersToSketch();
+      });
+
+      readStop2Controls();
+      pushStop2FiltersToSketch();
     }
 
     // ----------------------------
@@ -185,6 +240,7 @@
             api.ready.then(function () {
               try { if (api && api.setState) window.__sketchAPI = api; } catch (e) { }
               wireStop1Controls();
+              wireStop2Controls(); // ✅ NEW
               wireStop3Controls();
               updateToggleButtons();
               pushAllFiltersToSketch();
@@ -194,6 +250,7 @@
           } else {
             if (api && api.setState) window.__sketchAPI = api;
             wireStop1Controls();
+            wireStop2Controls(); // ✅ NEW
             wireStop3Controls();
             updateToggleButtons();
             pushAllFiltersToSketch();
