@@ -212,3 +212,19 @@ body.viz-open-stop1 #viz-controls-stop1{
 body.viz-open-stop3 #viz-controls-stop3{
   display: grid;
 }
+
+/* Stop 3 controls: tighter + modern */
+body.viz-open-stop3 #viz-controls-stop3{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 10px 12px;
+  max-width: 680px;
+}
+
+body.viz-open-stop3 #viz-controls-stop3 .viz-control:nth-child(4){
+  grid-column: 1 / -1;
+}
+
+body.viz-open-stop3 #viz-controls-stop3 select{
+  border-radius: 12px;
+}
