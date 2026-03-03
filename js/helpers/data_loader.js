@@ -1,24 +1,5 @@
 // data_loader.js
-// Fetch + parse utilities.
-// Exposes:
-// - DataLoader.loadTSV(url)
-// - DataLoader.loadCSVPick(url, pickCols)  // faster: only keeps selected columns
-// - DataLoader.preprocessCollisions(rows)
-
 (function () {
-  function parseTSV(text) {
-    var lines = (text || '').trim().split(/\r?\n/);
-    if (!lines || lines.length === 0) return [];
-    var rows = lines.slice(1);
-    return rows.map(function (line) {
-      var parts = line.split('\t');
-      var word = (parts[0] || '').replace(/^"|"$/g, '');
-      var time = parseFloat(parts[1]);
-      var filler = parts[2] ? (parts[2].trim() === '1' || parts[2].trim() === 'true') : false;
-      return { word: word, time: time, filler: filler, min: Math.floor(time / 60) };
-    });
-  }
-
   function splitCSVLine(line) {
     var res = [];
     var cur = '';
@@ -46,31 +27,21 @@
   }
 
   function loadText(url) {
-    // If you open index.html as file://, fetch will fail.
     if (window.location && window.location.protocol === 'file:') {
       return Promise.reject(new Error(
         "You're opening the page as file://. Run a local server (VSCode Live Server or `python3 -m http.server`) so fetch() can read CSVs."
       ));
     }
-
-    return fetch(url).then(function (r) {
-      return r.text();
-    });
+    return fetch(url).then(function (r) { return r.text(); });
   }
 
-  function loadTSV(url) {
-    return loadText(url).then(function (text) {
-      return parseTSV(text);
-    });
-  }
-
-  // Fast CSV picker: only returns an array of objects with the requested columns.
   function parseCSVPick(text, pickCols) {
     text = (text || '').replace(/\r/g, '');
     var lines = text.split('\n').filter(function (l) { return l.trim().length > 0; });
     if (!lines.length) return [];
 
     var header = splitCSVLine(lines[0]).map(function (h) { return (h || '').trim(); });
+
     var idx = {};
     for (var i = 0; i < pickCols.length; i++) {
       idx[pickCols[i]] = header.indexOf(pickCols[i]);
@@ -87,6 +58,7 @@
       }
       out.push(obj);
     }
+
     return out;
   }
 
@@ -96,13 +68,34 @@
     });
   }
 
+  // ✅ IMPORTANT: do NOT use fallback||0 (NaN would turn into 0)
+  function toInt(v, fallback) {
+    var n = parseInt(v, 10);
+    return isNaN(n) ? fallback : n;
+  }
+
+  function toFloat(v, fallback) {
+    var n = parseFloat(v);
+    return isNaN(n) ? fallback : n;
+  }
+
+  function truthy(v) {
+    var s = (v === null || v === undefined) ? '' : String(v).trim().toLowerCase();
+    return (s === 'y' || s === 'yes' || s === '1' || s === 'true' || s === 't');
+  }
+
+  // ✅ Extract a real year from "1/1/2025" or any string containing 4 digits
+  function extractYear(v) {
+    var s = (v === null || v === undefined) ? '' : String(v);
+    var m = s.match(/(\d{4})/);
+    return m ? parseInt(m[1], 10) : null;
+  }
+
   window.DataLoader = {
-    parseTSV: parseTSV,
-    loadTSV: loadTSV,
     loadCSVPick: loadCSVPick
   };
 
-  // Collisions normalize (Stop 1 needs only gridX/gridY and crosswalk_count)
+  // Collisions normalize for Stop 1
   window.DataLoader.preprocessCollisions = function (rows) {
     rows = rows || [];
     var out = [];
@@ -110,17 +103,36 @@
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i] || {};
 
-      var gx = parseInt(r.gridX, 10);
-      var gy = parseInt(r.gridY, 10);
-      if (isNaN(gx) || isNaN(gy)) continue;
+      var x = toFloat(r.x, NaN);
+      var y = toFloat(r.y, NaN);
+      if (isNaN(x) || isNaN(y)) continue;
 
-      var cw = 0;
-      if (r.crosswalk_count !== undefined && r.crosswalk_count !== '') {
-        cw = parseInt(r.crosswalk_count, 10);
-        if (isNaN(cw)) cw = 0;
-      }
+      var yr = extractYear(r.Year); // <-- FIXED
+      var hr = toInt(r.Hour, null);
 
-      out.push({ gridX: gx, gridY: gy, crosswalk_count: cw });
+      out.push({
+        x: x,
+        y: y,
+        year: yr,
+        hour: hr,
+
+        location: (r.LOCATION || '').trim(),
+        collisionType: (r.COLLISIONTYPE || '').trim(),
+        severity: (r.SEVERITYDESC || '').trim(),
+
+        injuries: toInt(r.INJURIES, 0),
+        serious: toInt(r.SERIOUSINJURIES, 0),
+        fatalities: toInt(r.FATALITIES, 0),
+
+        isPed: truthy(r.IsPedCrash),
+        isBike: truthy(r.IsBikeCrash),
+
+        speeding: truthy(r.SPEEDING),
+        inattn: truthy(r.INATTENTIONIND),
+        underinfl: truthy(r.UNDERINFL),
+
+        crosswalk_count: toInt(r.crosswalk_count, 0)
+      });
     }
 
     return out;

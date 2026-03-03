@@ -34,15 +34,36 @@
         return Promise.resolve(manager.data);
       }
 
-      // Only pick the columns we need (much faster)
-      return window.DataLoader.loadCSVPick(collisionsUrl, ['gridX', 'gridY', 'crosswalk_count'])
+      // Only pick what we need for Stop 1 (keeps loading fast)
+      var cols = [
+        'x','y','Year','Month','Hour',
+        'LOCATION','COLLISIONTYPE','SEVERITYDESC',
+        'INJURIES','SERIOUSINJURIES','FATALITIES',
+        'IsPedCrash','IsBikeCrash',
+        'SPEEDING','INATTENTIONIND','UNDERINFL',
+        'crosswalk_count'
+      ];
+
+      return window.DataLoader.loadCSVPick(collisionsUrl, cols)
         .then(function (rows) {
           var cleaned = window.DataLoader.preprocessCollisions(rows);
-          manager.data.collisionsRaw = cleaned;
 
-          if (window.VizHotspots && window.VizHotspots.setCollisions) {
-            window.VizHotspots.setCollisions(manager, cleaned);
+          manager.data.collisionsAll = cleaned;
+
+          // compute global bounds once (stable “map”)
+          var minX = Infinity, maxX = -Infinity;
+          var minY = Infinity, maxY = -Infinity;
+
+          for (var i = 0; i < cleaned.length; i++) {
+            var d = cleaned[i];
+            if (d.x < minX) minX = d.x;
+            if (d.x > maxX) maxX = d.x;
+            if (d.y < minY) minY = d.y;
+            if (d.y > maxY) maxY = d.y;
           }
+
+          manager.data.bounds = { minX: minX, maxX: maxX, minY: minY, maxY: maxY };
+          manager.data.hotspotAggCache = {}; // clear cache on reload
 
           return manager.data;
         })
@@ -54,21 +75,17 @@
     },
 
     draw: function (p, manager, ai, progress) {
-      // Title screen (ai 0)
       if (ai === 0) {
         if (window.VizTitle && window.VizTitle.draw) window.VizTitle.draw(p, manager, ai, progress);
         else p.background(255);
         return;
       }
 
-      // Stops 1..6: DEFAULT is ROAD.
-      // Only show a stop’s visualization when the user clicks "Open visualization".
       if (ai >= 1 && ai <= 6) {
         var open = !!manager.state.openViz;
         var openFor = manager.state.openVizFor;
 
         if (open && openFor === ai) {
-          // Stop 1 visualization is implemented
           if (ai === 1) {
             if (window.VizHotspots && window.VizHotspots.draw) {
               window.VizHotspots.draw(p, manager);
@@ -78,18 +95,15 @@
             return;
           }
 
-          // Other stops not implemented yet
           drawPlaceholder(p, manager, ai);
           return;
         }
 
-        // Road view
         if (window.VizRoad && window.VizRoad.draw) window.VizRoad.draw(p, manager, ai, progress);
         else p.background(255);
         return;
       }
 
-      // Fallback
       if (window.VizRoad && window.VizRoad.draw) window.VizRoad.draw(p, manager, 6, progress);
       else p.background(255);
     }

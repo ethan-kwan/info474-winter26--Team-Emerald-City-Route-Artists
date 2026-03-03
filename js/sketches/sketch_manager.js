@@ -5,21 +5,28 @@ function startP5() {
   function SketchManager() {
     this.margin = { top: 0, left: 0, bottom: 0, right: 0 };
 
-    // drawing state
     this.state = {
       activeIndex: 0,
       progress: 0,
 
-      // NEW: controls whether the current stop is showing road or the stop’s viz
       openViz: false,
-      openVizFor: null
+      openVizFor: null,
+
+      // NEW filters (Stop 1)
+      filterYear: 'all',
+      filterSeverity: 'all',
+      filterMode: 'all',
+      filterTime: 'all',
+
+      // pin reset token so filters can clear pinned tooltip
+      pinResetToken: 0
     };
 
-    // data placeholder
     this.data = {
-      collisionsRaw: [],
-      collisionsAgg: null,
-      loadError: null
+      collisionsAll: [],
+      bounds: null,
+      loadError: null,
+      hotspotAggCache: {}
     };
 
     this._computeSize = function () {
@@ -72,6 +79,13 @@ function startP5() {
 
     if (s.openViz !== undefined) this.state.openViz = !!s.openViz;
     if (s.openVizFor !== undefined) this.state.openVizFor = s.openVizFor;
+
+    if (s.filterYear !== undefined) this.state.filterYear = s.filterYear;
+    if (s.filterSeverity !== undefined) this.state.filterSeverity = s.filterSeverity;
+    if (s.filterMode !== undefined) this.state.filterMode = s.filterMode;
+    if (s.filterTime !== undefined) this.state.filterTime = s.filterTime;
+
+    if (s.pinResetToken !== undefined) this.state.pinResetToken = s.pinResetToken;
   };
 
   SketchManager.prototype.setData = function (newData) {

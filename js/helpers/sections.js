@@ -17,6 +17,15 @@
     window.__vizUI = { open: false, stop: null };
     window.__activeStop = 0;
 
+    // Filter state (Stop 1)
+    window.__vizFilters = {
+      year: 'all',
+      severity: 'all',
+      mode: 'all',
+      time: 'all',
+      pinResetToken: 0
+    };
+
     function updateToggleButtons() {
       var btns = document.querySelectorAll('[data-viz-toggle]');
       btns.forEach(function (btn) {
@@ -28,18 +37,64 @@
       });
     }
 
-    function setVizOpen(open, stop) {
-      window.__vizUI.open = !!open;
-      window.__vizUI.stop = open ? stop : null;
-
+    function pushFiltersToSketch() {
       if (window.__sketchAPI && window.__sketchAPI.setState) {
         window.__sketchAPI.setState({
-          openViz: window.__vizUI.open,
-          openVizFor: window.__vizUI.stop
+          filterYear: window.__vizFilters.year,
+          filterSeverity: window.__vizFilters.severity,
+          filterMode: window.__vizFilters.mode,
+          filterTime: window.__vizFilters.time,
+          pinResetToken: window.__vizFilters.pinResetToken
         });
       }
+    }
 
-      updateToggleButtons();
+    function setVizOpen(open, stop) 
+    {
+        window.__vizUI.open = !!open;
+        window.__vizUI.stop = open ? stop : null;
+
+        document.body.classList.toggle('viz-open-stop1', window.__vizUI.open && window.__vizUI.stop === 1);
+
+        if (window.__sketchAPI && window.__sketchAPI.setState) {
+            window.__sketchAPI.setState({
+            openViz: window.__vizUI.open,
+            openVizFor: window.__vizUI.stop
+            });
+        }
+
+        updateToggleButtons();
+        pushFiltersToSketch();
+    }
+
+    function readStop1Controls() {
+      var yearEl = document.getElementById('filter-year');
+      var sevEl = document.getElementById('filter-severity');
+      var modeEl = document.getElementById('filter-mode');
+      var timeEl = document.getElementById('filter-time');
+
+      if (yearEl) window.__vizFilters.year = yearEl.value || 'all';
+      if (sevEl) window.__vizFilters.severity = sevEl.value || 'all';
+      if (modeEl) window.__vizFilters.mode = modeEl.value || 'all';
+      if (timeEl) window.__vizFilters.time = timeEl.value || 'all';
+    }
+
+    function wireStop1Controls() {
+      var container = document.getElementById('viz-controls-stop1');
+      if (!container) return;
+
+      container.addEventListener('change', function () {
+        readStop1Controls();
+
+        // Clear any pinned tooltip when filters change
+        window.__vizFilters.pinResetToken += 1;
+
+        pushFiltersToSketch();
+      });
+
+      // initialize
+      readStop1Controls();
+      pushFiltersToSketch();
     }
 
     // If we’re hiding the canvas until showAt
@@ -59,7 +114,6 @@
       var stop = parseInt(btn.getAttribute('data-viz-toggle'), 10);
       if (isNaN(stop)) return;
 
-      // Toggle behavior
       var isOpen = window.__vizUI.open && window.__vizUI.stop === stop;
       if (isOpen) setVizOpen(false, null);
       else setVizOpen(true, stop);
@@ -75,11 +129,17 @@
           if (api && api.ready && typeof api.ready.then === 'function') {
             api.ready.then(function () {
               try { if (api && api.setState) window.__sketchAPI = api; } catch (e) { }
+              wireStop1Controls();
+              updateToggleButtons();
+              pushFiltersToSketch();
             }).catch(function () {
               if (api && api.setState) window.__sketchAPI = api;
             });
           } else {
             if (api && api.setState) window.__sketchAPI = api;
+            wireStop1Controls();
+            updateToggleButtons();
+            pushFiltersToSketch();
           }
 
           var ScrollerCtor = window.Scroller;
@@ -94,14 +154,12 @@
           }
 
           sc.on('active', function (index) {
-            // Only show the active step
             var stepEls = document.querySelectorAll(cfg.stepSelector);
             stepEls.forEach(function (el, i) {
               if (i === index) el.classList.add('is-active');
               else el.classList.remove('is-active');
             });
 
-            // Map activeIndex from dataset
             var mappedIndex = index;
             try {
               var stepEl = (sc.steps && sc.steps[index]) ? sc.steps[index] : stepEls[index];
@@ -113,7 +171,7 @@
 
             window.__activeStop = mappedIndex;
 
-            // IMPORTANT: when you enter a stop, default back to ROAD (closed)
+            // When entering a stop, default back to ROAD
             setVizOpen(false, null);
 
             if (window.__sketchAPI && window.__sketchAPI.setState) {
@@ -140,8 +198,6 @@
 
             if (visualController) visualController.handleProgress(mappedIndex, progress);
           });
-
-          updateToggleButtons();
 
         } catch (err) {
           console.error('sections: startP5 threw an error', err);
