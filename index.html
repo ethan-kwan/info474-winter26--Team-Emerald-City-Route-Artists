@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <title>Seattle Crash Hotspots — Interactive Article</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -14,7 +13,7 @@
     <!-- FULL-WIDTH STICKY VIS -->
     <div id="vis" class="vis-hidden"></div>
 
-    <!-- SCROLL STEPS (NO LEFT COLUMN) -->
+    <!-- SCROLL STEPS -->
     <div id="sections">
 
       <section class="step" data-active-index="0">
@@ -27,39 +26,81 @@
 
       <section class="step" data-active-index="1">
         <div class="title">Stop 1</div>
-        <div class="step-body">Citywide hotspot overview (placeholder for now).</div>
+        <div class="step-body">Where do crashes cluster citywide?</div>
+
+        <div class="viz-cta">
+          <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="1">
+            Open visualization
+          </button>
+          <div class="viz-note">Heatmap of crash counts by grid cell. Hover to inspect.</div>
+        </div>
       </section>
 
       <section class="step" data-active-index="2">
         <div class="title">Stop 2</div>
-        <div class="step-body">Compare time windows (placeholder for now).</div>
+        <div class="step-body">Which hotspots persist over time?</div>
+
+        <div class="viz-cta">
+          <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="2">
+            Open visualization
+          </button>
+          <div class="viz-note">(Coming soon) Compare hotspots across time windows.</div>
+        </div>
       </section>
 
       <section class="step" data-active-index="3">
         <div class="title">Stop 3</div>
-        <div class="step-body">Mode-based comparison (placeholder for now).</div>
+        <div class="step-body">Who is affected?</div>
+
+        <div class="viz-cta">
+          <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="3">
+            Open visualization
+          </button>
+          <div class="viz-note">(Coming soon) Compare crash types / modes.</div>
+        </div>
       </section>
 
       <section class="step" data-active-index="4">
         <div class="title">Stop 4</div>
-        <div class="step-body">Time-of-day / day-of-week (placeholder for now).</div>
+        <div class="step-body">When does risk peak?</div>
+
+        <div class="viz-cta">
+          <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="4">
+            Open visualization
+          </button>
+          <div class="viz-note">(Coming soon) Time-of-day / day-of-week patterns.</div>
+        </div>
       </section>
 
       <section class="step" data-active-index="5">
         <div class="title">Stop 5</div>
-        <div class="step-body">Streets + interventions (placeholder for now).</div>
+        <div class="step-body">Road context + safety tools</div>
+
+        <div class="viz-cta">
+          <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="5">
+            Open visualization
+          </button>
+          <div class="viz-note">(Coming soon) Streets + interventions.</div>
+        </div>
       </section>
 
       <section class="step" data-active-index="6">
         <div class="title">Stop 6</div>
-        <div class="step-body">Personalized exploration (placeholder for now).</div>
+        <div class="step-body">Your route / safety plan</div>
+
+        <div class="viz-cta">
+          <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="6">
+            Open visualization
+          </button>
+          <div class="viz-note">(Coming soon) Personalized exploration.</div>
+        </div>
       </section>
 
       <div class="end-spacer"></div>
     </div>
   </div>
 
-  <!-- p5.js (CDN) -->
+  <!-- p5.js -->
   <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
 
   <!-- helpers -->
@@ -71,7 +112,8 @@
   <script>
     window.ScrollDemoConfig = {
       showAt: 1,
-      trigger: 'center'
+      trigger: 'center',
+      collisionsUrl: 'data/master_collisions_crosswalks_2022_2026.csv'
     };
   </script>
 
@@ -84,9 +126,9 @@
   <!-- viz -->
   <script src="js/sketches/viz/viz_title.js"></script>
   <script src="js/sketches/viz/viz_road.js"></script>
+  <script src="js/sketches/viz/viz_hotspots.js"></script>
 
   <!-- renderer -->
   <script src="js/sketches/sketch_renderer.js"></script>
 </body>
-
 </html>

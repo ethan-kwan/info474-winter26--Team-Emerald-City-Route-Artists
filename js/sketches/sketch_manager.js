@@ -1,29 +1,33 @@
-// sketch_manager.js
 function startP5() {
-
   var localRenderer;
   localRenderer = window.Renderer;
 
   function SketchManager() {
-    // No margins anymore (full canvas)
     this.margin = { top: 0, left: 0, bottom: 0, right: 0 };
 
     // drawing state
-    this.state = { activeIndex: 0, progress: 0 };
+    this.state = {
+      activeIndex: 0,
+      progress: 0,
+
+      // NEW: controls whether the current stop is showing road or the stop’s viz
+      openViz: false,
+      openVizFor: null
+    };
 
     // data placeholder
-    this.data = [];
+    this.data = {
+      collisionsRaw: [],
+      collisionsAgg: null,
+      loadError: null
+    };
 
-    // compute size from the #vis container + viewport
     this._computeSize = function () {
       var parent = document.getElementById('vis');
       var parentW = parent ? parent.clientWidth : window.innerWidth;
 
-      // big canvas, but don’t go insane on ultra-wide screens
       var maxW = 1200;
       var w = Math.max(360, Math.min(maxW, parentW));
-
-      // tall enough to feel like a “map”
       var h = Math.max(560, Math.floor(window.innerHeight * 0.88));
 
       this.width = w;
@@ -65,6 +69,9 @@ function startP5() {
   SketchManager.prototype.setState = function (s) {
     if (s.activeIndex !== undefined) this.state.activeIndex = s.activeIndex;
     if (s.progress !== undefined) this.state.progress = s.progress;
+
+    if (s.openViz !== undefined) this.state.openViz = !!s.openViz;
+    if (s.openVizFor !== undefined) this.state.openVizFor = s.openVizFor;
   };
 
   SketchManager.prototype.setData = function (newData) {
