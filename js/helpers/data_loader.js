@@ -91,6 +91,31 @@
     return m ? parseInt(m[1], 10) : null;
   }
 
+  // Parse "M/D/YYYY H:MM:SS AM" (or "M/D/YYYY 12:00:00 AM") → day-of-week (0=Sun..6=Sat)
+  function parseDowFromUSDateTime(v) {
+    var s = (v === null || v === undefined) ? '' : String(v).trim();
+    if (!s) return null;
+
+    var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?)?/i);
+    if (!m) return null;
+
+    var month = parseInt(m[1], 10) - 1;
+    var day = parseInt(m[2], 10);
+    var year = parseInt(m[3], 10);
+
+    var hour = (m[4] !== undefined && m[4] !== null && m[4] !== '') ? parseInt(m[4], 10) : 0;
+    var min = (m[5] !== undefined && m[5] !== null && m[5] !== '') ? parseInt(m[5], 10) : 0;
+    var sec = (m[6] !== undefined && m[6] !== null && m[6] !== '') ? parseInt(m[6], 10) : 0;
+    var ampm = (m[7] || '').toUpperCase();
+
+    if (ampm === 'PM' && hour < 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+
+    var dt = new Date(year, month, day, hour, min, sec);
+    if (!dt || isNaN(dt.getTime())) return null;
+    return dt.getDay();
+  }
+
   window.DataLoader = {
     loadCSVPick: loadCSVPick
   };
@@ -109,12 +134,14 @@
 
       var yr = extractYear(r.Year); // <-- FIXED
       var hr = toInt(r.Hour, null);
+      var dow = parseDowFromUSDateTime(r.INCDTTM);
 
       out.push({
         x: x,
         y: y,
         year: yr,
         hour: hr,
+        dow: dow,
 
         weather: (r.WEATHER || '').trim(),
         roadcond: (r.ROADCOND || '').trim(),

@@ -107,8 +107,11 @@
 
       // body classes (controls visibility)
       document.body.classList.toggle('viz-open-stop1', window.__vizUI.open && window.__vizUI.stop === 1);
-      document.body.classList.toggle('viz-open-stop2', window.__vizUI.open && window.__vizUI.stop === 2); // ✅ NEW
+      document.body.classList.toggle('viz-open-stop2', window.__vizUI.open && window.__vizUI.stop === 2);
       document.body.classList.toggle('viz-open-stop3', window.__vizUI.open && window.__vizUI.stop === 3);
+      document.body.classList.toggle('viz-open-stop4', window.__vizUI.open && window.__vizUI.stop === 4);
+      document.body.classList.toggle('viz-open-stop5', window.__vizUI.open && window.__vizUI.stop === 5);
+      document.body.classList.toggle('viz-open-stop6', window.__vizUI.open && window.__vizUI.stop === 6);
 
       if (window.__sketchAPI && window.__sketchAPI.setState) {
         window.__sketchAPI.setState({

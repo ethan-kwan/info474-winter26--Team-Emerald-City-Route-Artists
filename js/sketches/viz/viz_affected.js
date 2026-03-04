@@ -265,42 +265,6 @@
         if (b === "Fatal") p.fill(colFat[0], colFat[1], colFat[2], colFat[3]);
       }
 
-      // Legend pills (modern)
-      (function drawLegend() {
-        var lx = x0;
-        var ly = y0;
-
-        var legend = [
-          { k: "PDO", c: colPDO },
-          { k: "Injury", c: colInj },
-          { k: "Serious", c: colSer },
-          { k: "Fatal", c: colFat }
-        ];
-
-        p.push();
-        p.textAlign(p.LEFT, p.CENTER);
-        p.textSize(12);
-
-        var x = lx;
-        for (var i = 0; i < legend.length; i++) {
-          var it = legend[i];
-          var pillW = 92;
-          var pillH = 26;
-
-          p.noStroke();
-          p.fill(255, 255, 255, 190);
-          p.rect(x, ly, pillW, pillH, 999);
-
-          p.fill(it.c[0], it.c[1], it.c[2], it.c[3]);
-          p.rect(x + 10, ly + 8, 10, 10, 3);
-
-          p.fill(60);
-          p.text(it.k, x + 26, ly + pillH / 2);
-          x += pillW + 10;
-        }
-        p.pop();
-      })();
-
       // Axis gridlines (percent mode only)
       if (metric !== "count") {
         p.push();
@@ -425,6 +389,33 @@
         p.pop();
       }
 
+      // Severity legend at bottom of chart
+      var legendY = startY + groupsOrder.length * rowH + 14;
+      var legend = [
+        { k: "PDO", c: colPDO },
+        { k: "Injury", c: colInj },
+        { k: "Serious", c: colSer },
+        { k: "Fatal", c: colFat }
+      ];
+      p.push();
+      p.textAlign(p.LEFT, p.CENTER);
+      p.textSize(12);
+      var lx = x0;
+      for (var li = 0; li < legend.length; li++) {
+        var it = legend[li];
+        var pillW = 92;
+        var pillH = 26;
+        p.noStroke();
+        p.fill(255, 255, 255, 190);
+        p.rect(lx, legendY, pillW, pillH, 999);
+        p.fill(it.c[0], it.c[1], it.c[2], it.c[3]);
+        p.rect(lx + 10, legendY + 8, 10, 10, 3);
+        p.fill(60);
+        p.text(it.k, lx + 26, legendY + pillH / 2);
+        lx += pillW + 10;
+      }
+      p.pop();
+
       // hover detection
       function findHover(mx, my) {
         for (var i = 0; i < hitboxes.length; i++) {
@@ -467,14 +458,14 @@
         // shadow
         p.push();
         p.noStroke();
-        p.fill(0, 0, 0, 18);
+        p.fill(0, 0, 0, 12);
         p.rect(tipX + 3, tipY + 4, tipW, tipH, 14);
         p.pop();
 
-        // box
+        // box (semi-transparent gray)
         p.push();
         p.noStroke();
-        p.fill(255);
+        p.fill(220, 222, 228, 238);
         p.rect(tipX, tipY, tipW, tipH, 14);
 
         var segPct = pct(active.count, active.total);
@@ -532,9 +523,9 @@
 
         p.fill(60);
         p.text(
-          "• Pedestrian-involved crashes usually have the highest severe share.\n" +
-          "• Bike-involved crashes often sit in the middle.\n" +
-          "• “Other crashes” are most common but typically less severe (more PDO).",
+          "- Pedestrian-involved crashes usually have the highest severe share.\n" +
+          "- Bike-involved crashes often sit in the middle.\n" +
+          "- “Other crashes” are most common but typically less severe (more PDO).",
           panelX + 16, panelY + 132
         );
 

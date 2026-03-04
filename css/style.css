@@ -229,6 +229,15 @@ body.viz-open-stop3 #viz-controls-stop3 select{
   border-radius: 12px;
 }
 
+/* Stop 4: scrollable so "What to notice" and full chart are visible */
+body.viz-open-stop4 #vis {
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
 /* Hero image on the intro step */
 .step > .hero-image{
   max-width: 980px;
@@ -479,6 +488,15 @@ body.viz-open-stop3 #viz-controls-stop3 select{
   border-radius: 12px;
 }
 
+/* Stop 4: scrollable so "What to notice" and full chart are visible */
+body.viz-open-stop4 #vis {
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
 /* style.css — full-width scrollytelling layout */
 
 html, body {
@@ -690,4 +708,13 @@ body.viz-open-stop3 #viz-controls-stop3 .viz-control:nth-child(4){
 
 body.viz-open-stop3 #viz-controls-stop3 select{
   border-radius: 12px;
+}
+
+/* Stop 4: scrollable so "What to notice" and full chart are visible */
+body.viz-open-stop4 #vis {
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  align-items: flex-start;
+  justify-content: flex-start;
 }

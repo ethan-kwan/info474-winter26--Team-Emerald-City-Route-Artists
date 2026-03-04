@@ -719,7 +719,7 @@
         for (var ki = 0; ki < keyList.length; ki++) {
           var kitem = keyList[ki];
           if (y > (L.side.top + L.side.h - 120)) break; // don't overflow
-          p.text("• " + kitem.key + ": " + kitem.desc, L.side.left + 24, y);
+          p.text("- " + kitem.key + ": " + kitem.desc, L.side.left + 24, y);
           y += 16;
         }
 
@@ -789,12 +789,12 @@
       var tipX = clamp(anchorX + 16, 16, rightLimit - tipW);
       var tipY = clamp(anchorY - tipH - 16, L.topBannerH + 18, p.height - tipH - 16);
 
-      // shadow + box
+      // shadow + box (semi-transparent gray)
       p.push();
       p.noStroke();
-      p.fill(0, 0, 0, 18);
+      p.fill(0, 0, 0, 12);
       p.rect(tipX + 3, tipY + 4, tipW, tipH, 14);
-      p.fill(255);
+      p.fill(220, 222, 228, 238);
       p.rect(tipX, tipY, tipW, tipH, 14);
       p.pop();
 

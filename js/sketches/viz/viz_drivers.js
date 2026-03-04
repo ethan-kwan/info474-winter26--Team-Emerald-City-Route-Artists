@@ -191,7 +191,7 @@
         } else {
           it.value = pct1(it.severe, Math.max(1, it.count)); // severe rate within category
           it.valueText = it.value.toFixed(1) + "%";
-          it.subText = it.count + " crashes • " + it.severe + " severe";
+          it.subText = it.count + " crashes - " + it.severe + " severe";
         }
 
         if (it.value > maxVal) maxVal = it.value;

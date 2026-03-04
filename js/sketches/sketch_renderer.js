@@ -36,6 +36,7 @@
       // Columns needed for Stop 1 + Stop 2 + Stop 3
       var cols = [
         'x','y','Year','Hour',
+        'INCDTTM',
         'LOCATION','COLLISIONTYPE','SEVERITYDESC',
         'INJURIES','SERIOUSINJURIES','FATALITIES',
         'IsPedCrash','IsBikeCrash',
@@ -65,10 +66,35 @@
 
           // clear caches when data reloads
           manager.data.hotspotAggCache = {};
-          manager.data.driversCache = {};   // ✅ NEW
+          manager.data.driversCache = {};
           manager.data.affectedCache = {};
+          manager.data.streetContextCache = {};
 
-          return manager.data;
+          var streetsUrl = cfg.streetsUrl || 'data/Seattle_Streets_1_-6616379146259667068.csv';
+          return window.DataLoader.loadCSVPick(streetsUrl, ['UNITDESC', 'SPEEDLIMIT'])
+            .then(function (streetRows) {
+              function norm(s) { return (s || '').trim().toUpperCase().replace(/\s+/g, ' '); }
+              var map = {};
+              var countBySpeed = {};
+              for (var i = 0; i < streetRows.length; i++) {
+                var r = streetRows[i];
+                var key = norm(r.UNITDESC);
+                var sp = parseInt(r.SPEEDLIMIT, 10);
+                if (!isNaN(sp)) countBySpeed[sp] = (countBySpeed[sp] || 0) + 1;
+                if (!key) continue;
+                if (isNaN(sp)) continue;
+                if (map[key] === undefined) map[key] = sp;
+              }
+              manager.data.streetSpeedByDesc = map;
+              manager.data.streetCountBySpeed = countBySpeed;
+              return manager.data;
+            })
+            .catch(function (err) {
+              console.warn("Streets CSV load failed (Stop 5 speed context):", err);
+              manager.data.streetSpeedByDesc = {};
+              manager.data.streetCountBySpeed = {};
+              return manager.data;
+            });
         })
         .catch(function (err) {
           manager.data.loadError = (err && err.message) ? err.message : String(err);
@@ -114,7 +140,27 @@
             return;
           }
 
-          // Other stops not implemented
+          // Stop 4 time patterns
+          if (ai === 4) {
+            if (window.VizTime && window.VizTime.draw) window.VizTime.draw(p, manager);
+            else drawPlaceholder(p, manager, 4);
+            return;
+          }
+
+          // Stop 5 street context (speed limit)
+          if (ai === 5) {
+            if (window.VizStreetContext && window.VizStreetContext.draw) window.VizStreetContext.draw(p, manager);
+            else drawPlaceholder(p, manager, 5);
+            return;
+          }
+
+          // Stop 6 recap & conclusion
+          if (ai === 6) {
+            if (window.VizConclusion && window.VizConclusion.draw) window.VizConclusion.draw(p, manager);
+            else drawPlaceholder(p, manager, 6);
+            return;
+          }
+
           drawPlaceholder(p, manager, ai);
           return;
         }

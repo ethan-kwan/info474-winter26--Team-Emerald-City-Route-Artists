@@ -50,6 +50,7 @@ function startP5() {
       var w = Math.max(360, Math.min(maxW, parentW));
       var h = Math.max(560, Math.floor(window.innerHeight * 0.88));
 
+
       this.width = w;
       this.height = h;
       this.canvasWidth = w;
