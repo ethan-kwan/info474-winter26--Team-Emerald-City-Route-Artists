@@ -1,6 +1,3 @@
-/* =========================================
-   js/sketches/viz/viz_road.js
-   ========================================= */
 (function () {
   function clamp01(x) {
     return Math.max(0, Math.min(1, x));
@@ -20,21 +17,22 @@
 
       manager._road = {
         stops: [
-            { key: 1, t: 0.01, title: "Where do crashes cluster?" }, // moved up
-            { key: 2, t: 0.27, title: "What’s driving risk?" },
-            { key: 3, t: 0.40, title: "Who is affected?" },
-            { key: 4, t: 0.58, title: "When does risk peak?" },
-            { key: 5, t: 0.89, title: "Road context + safety tools" },
-            { key: 6, t: 0.91, title: "Your Route / Safety Plan" }
+          { key: 1, t: 0.10, title: "Where do crashes cluster?" },
+          { key: 2, t: 0.33, title: "What’s driving risk?" },
+          { key: 3, t: 0.48, title: "Who is affected?" },
+          { key: 4, t: 0.64, title: "When does risk peak?" },
+          { key: 5, t: 0.84, title: "Road context + safety tools" },
+          { key: 6, t: 0.94, title: "Your Route / Safety Plan" }
         ]
-        };
+      };
 
       manager._roadEnv = { trees: [] };
+      manager._roadAnchorCache = null;
 
       for (var i = 0; i < 65; i++) {
-        var t = 0.01 + Math.random() * 0.98;
+        var t = 0.04 + Math.random() * 0.90;
 
-        if (t > 0.95) continue;
+        if (t > 0.96) continue;
 
         var side = Math.random() > 0.5 ? 1 : -1;
         var offset = 170 + Math.random() * 120;
@@ -52,8 +50,8 @@
       var w = manager.width || 800;
       var h = manager.height || 700;
 
-      var topPad = 90;
-      var botPad = 90;
+      var topPad = 125;
+      var botPad = 120;
       var usableH = Math.max(1, h - topPad - botPad);
 
       var y = topPad + t * usableH;
@@ -67,6 +65,167 @@
         amp2 * Math.sin(t * Math.PI * 3.0);
 
       return { x: x, y: y };
+    },
+
+    _getBaseStopAnchor: function (manager, stop) {
+      var c = this._centerAt(manager, stop.t);
+      var prev = this._centerAt(manager, Math.max(0, stop.t - 0.01));
+
+      var dx = c.x - prev.x;
+      var dy = c.y - prev.y;
+      var len = Math.sqrt(dx * dx + dy * dy);
+
+      if (!len) len = 1;
+
+      var side = (stop.key % 2 === 0) ? -1 : 1;
+
+      var nx = -dy / len * side;
+      var ny = dx / len * side;
+
+      var offset = 116;
+      var gx = c.x + nx * offset;
+      var gy = c.y + ny * offset;
+
+      /* Manual stop tweaks */
+      if (stop.key === 1) {
+        gy -= 90;
+        gx -= 92;
+      }
+
+      if (stop.key === 2) {
+        gy -= 8;
+        gx += 8;
+      }
+
+      if (stop.key === 3) {
+        gy -= 10;
+        gx += -45;
+      }
+
+      if (stop.key === 4) {
+        gy -= 10;
+        gx += 10;
+      }
+
+      if (stop.key === 5) {
+        gy += 72;
+        gx -= 70;
+      }
+
+      if (stop.key === 6) {
+        gy += 4;
+        gx += 4;
+      }
+
+      return {
+        x: gx,
+        y: gy,
+        side: side,
+        roadX: c.x,
+        roadY: c.y
+      };
+    },
+
+    _buildStopAnchors: function (manager) {
+      var cache = manager._roadAnchorCache;
+      if (
+        cache &&
+        cache.width === manager.width &&
+        cache.height === manager.height
+      ) {
+        return cache.anchors;
+      }
+
+      var stops = manager._road.stops;
+      var anchors = {};
+      var left = [];
+      var right = [];
+
+      for (var i = 0; i < stops.length; i++) {
+        var stop = stops[i];
+        var base = this._getBaseStopAnchor(manager, stop);
+        var item = {
+          key: stop.key,
+          side: base.side,
+          x: base.x,
+          y: base.y,
+          roadX: base.roadX,
+          roadY: base.roadY
+        };
+
+        if (item.side < 0) {
+          left.push(item);
+        } else {
+          right.push(item);
+        }
+      }
+
+      function resolveGroup(items, canvasH) {
+        items.sort(function (a, b) {
+          return a.y - b.y;
+        });
+
+        var minGap = 108;
+        var topBound = 70;
+        var bottomBound = canvasH - 70;
+
+        for (var i = 0; i < items.length; i++) {
+          items[i].y = clamp(items[i].y, topBound, bottomBound);
+
+          if (i > 0) {
+            var prev = items[i - 1];
+            if (items[i].y - prev.y < minGap) {
+              items[i].y = prev.y + minGap;
+            }
+          }
+        }
+
+        for (var j = items.length - 1; j >= 0; j--) {
+          items[j].y = clamp(items[j].y, topBound, bottomBound);
+
+          if (j < items.length - 1) {
+            var next = items[j + 1];
+            if (next.y - items[j].y < minGap) {
+              items[j].y = next.y - minGap;
+            }
+          }
+        }
+
+        for (var k = 0; k < items.length; k++) {
+          items[k].y = clamp(items[k].y, topBound, bottomBound);
+
+          /* slight horizontal staggering when markers are near each other */
+          if (k % 2 === 1) {
+            items[k].x += items[k].side * 14;
+          } else {
+            items[k].x -= items[k].side * 6;
+          }
+        }
+      }
+
+      resolveGroup(left, manager.height);
+      resolveGroup(right, manager.height);
+
+      for (var a = 0; a < left.length; a++) {
+        anchors[left[a].key] = left[a];
+      }
+
+      for (var b = 0; b < right.length; b++) {
+        anchors[right[b].key] = right[b];
+      }
+
+      manager._roadAnchorCache = {
+        width: manager.width,
+        height: manager.height,
+        anchors: anchors
+      };
+
+      return anchors;
+    },
+
+    _getStopAnchor: function (manager, stop) {
+      var anchors = this._buildStopAnchors(manager);
+      return anchors[stop.key];
     },
 
     _drawBackground: function (p) {
@@ -213,23 +372,9 @@
     },
 
     _drawStopMarker: function (p, manager, stop) {
-      var c = this._centerAt(manager, stop.t);
-      var prev = this._centerAt(manager, Math.max(0, stop.t - 0.01));
-
-      var dx = c.x - prev.x;
-      var dy = c.y - prev.y;
-      var len = Math.sqrt(dx * dx + dy * dy);
-
-      if (!len) len = 1;
-
-      var side = (stop.key % 2 === 0) ? -1 : 1;
-
-      var nx = -dy / len * side;
-      var ny = dx / len * side;
-
-      var offset = 132;
-      var gx = c.x + nx * offset;
-      var gy = c.y + ny * offset;
+      var anchor = this._getStopAnchor(manager, stop);
+      var gx = anchor.x;
+      var gy = anchor.y;
 
       p.push();
       p.translate(gx, gy);
@@ -267,7 +412,7 @@
 
       p.pop();
 
-      return { x: gx, y: gy, side: side };
+      return { x: gx, y: gy, side: anchor.side };
     },
 
     _buildLabelLayout: function (manager, activeStop) {
@@ -278,21 +423,11 @@
 
       for (var i = 0; i < stops.length; i++) {
         var stop = stops[i];
-        var c = this._centerAt(manager, stop.t);
-        var prev = this._centerAt(manager, Math.max(0, stop.t - 0.01));
+        var anchor = this._getStopAnchor(manager, stop);
 
-        var dx = c.x - prev.x;
-        var dy = c.y - prev.y;
-        var len = Math.sqrt(dx * dx + dy * dy);
-        if (!len) len = 1;
-
-        var side = (stop.key % 2 === 0) ? -1 : 1;
-        var nx = -dy / len * side;
-        var ny = dx / len * side;
-
-        var markerOffset = 132;
-        var gx = c.x + nx * markerOffset;
-        var gy = c.y + ny * markerOffset;
+        var gx = anchor.x;
+        var gy = anchor.y;
+        var side = anchor.side;
 
         var isActive = stop.key === activeStop;
         var boxW = isActive ? 260 : 150;
@@ -509,8 +644,8 @@
       p.rotate(angle);
 
       p.noStroke();
-      p.fill(0, 0, 0, 50);
-      p.rect(-30, -16, 70, 40, 10);
+      p.fill(0, 0, 0, 38);
+      p.ellipse(8, 18, 54, 24);
 
       if (manager._carIcon) {
         p.imageMode(p.CENTER);
@@ -544,7 +679,13 @@
       var idx = activeStop - 1;
 
       var rawP = clamp01(progress || 0);
-      var moveP = clamp01((rawP - 0.60) / 0.40);
+
+      /*
+        Keep the car aligned with the current stop for most of the step,
+        then move near the end so it does not look disconnected from the
+        active stop / gas station.
+      */
+      var moveP = clamp01((rawP - 0.78) / 0.18);
 
       var tA = stops[idx].t;
       var tB = (idx < stops.length - 1) ? stops[idx + 1].t : stops[idx].t;

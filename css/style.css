@@ -160,9 +160,12 @@ body.viz-open-stop6 #sections {
   pointer-events: auto;
 }
 
-/* Hero section should stay centered and wider */
+/* Hero section should stay centered and give more room before Stop 1 */
 .step[data-active-index="0"] {
   align-items: center;
+  min-height: 135vh;
+  padding-top: 48px;
+  padding-bottom: 180px;
 }
 
 .step[data-active-index="0"] > * {
@@ -171,6 +174,11 @@ body.viz-open-stop6 #sections {
   margin-left: auto;
   margin-right: auto;
   text-align: center;
+}
+
+/* Give stop 1 a little extra breathing room */
+.step[data-active-index="1"] {
+  padding-top: 120px;
 }
 
 /* =========================================
@@ -215,7 +223,7 @@ body.viz-open-stop6 #sections {
 }
 
 .end-spacer {
-  height: 60vh;
+  height: 80vh;
 }
 
 /* =========================================
@@ -416,6 +424,15 @@ body.viz-open-stop4 #vis {
     padding: 110px 24px 50px 24px;
   }
 
+  .step[data-active-index="0"] {
+    min-height: 128vh;
+    padding-bottom: 150px;
+  }
+
+  .step[data-active-index="1"] {
+    padding-top: 110px;
+  }
+
   .step > * {
     width: 288px;
     max-width: 288px;
@@ -454,6 +471,15 @@ body.viz-open-stop4 #vis {
     align-items: center;
     padding: 48px 20px;
     min-height: auto;
+  }
+
+  .step[data-active-index="0"] {
+    min-height: auto;
+    padding-bottom: 80px;
+  }
+
+  .step[data-active-index="1"] {
+    padding-top: 48px;
   }
 
   .step > * {
