@@ -1,3 +1,4 @@
+// scroller.js
 (function () {
   function Scroller(containerSelector, stepSelector, trigger) {
     this.container = document.querySelector(containerSelector) || document.body;

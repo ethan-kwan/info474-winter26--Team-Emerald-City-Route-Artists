@@ -24,7 +24,7 @@
             { key: 2, t: 0.27, title: "What’s driving risk?" },
             { key: 3, t: 0.40, title: "Who is affected?" },
             { key: 4, t: 0.58, title: "When does risk peak?" },
-            { key: 5, t: 0.86, title: "Road context + safety tools" },
+            { key: 5, t: 0.89, title: "Road context + safety tools" },
             { key: 6, t: 0.91, title: "Your Route / Safety Plan" }
         ]
         };

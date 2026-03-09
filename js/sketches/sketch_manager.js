@@ -19,11 +19,11 @@ function startP5() {
       filterTime: 'all',
       pinResetToken: 0,
 
-      // ✅ Stop 2 (drivers)
+      // Stop 2
       driverYear: 'all',
       driverMode: 'all',
       driverTime: 'all',
-      driverScope: 'all', // all | severe
+      driverScope: 'all',
       driverFactor: 'weather',
 
       // Stop 3
@@ -39,17 +39,16 @@ function startP5() {
       loadError: null,
       hotspotAggCache: {},
       affectedCache: {},
-      driversCache: {} // ✅ NEW
+      driversCache: {}
     };
 
     this._computeSize = function () {
-      var parent = document.getElementById('vis');
-      var parentW = parent ? parent.clientWidth : window.innerWidth;
+      var canvasHost = document.getElementById('vis-canvas');
+      var hostW = canvasHost ? canvasHost.clientWidth : window.innerWidth;
+      var hostH = canvasHost ? canvasHost.clientHeight : window.innerHeight;
 
-      var maxW = 1200;
-      var w = Math.max(360, Math.min(maxW, parentW));
-      var h = Math.max(560, Math.floor(window.innerHeight * 0.88));
-
+      var w = Math.max(360, hostW);
+      var h = Math.max(560, hostH);
 
       this.width = w;
       this.height = h;
@@ -65,11 +64,14 @@ function startP5() {
     var self = this;
     var sketch = function (p) {
       p.setup = function () {
-        var parent = document.getElementById('vis');
-        if (parent) parent.innerHTML = '';
+        var canvasHost = document.getElementById('vis-canvas');
+
+        if (canvasHost) {
+          canvasHost.innerHTML = '';
+        }
 
         self._computeSize();
-        p.createCanvas(self.canvasWidth, self.canvasHeight).parent('vis');
+        p.createCanvas(self.canvasWidth, self.canvasHeight).parent('vis-canvas');
         p.noStroke();
         p.frameRate(30);
       };
@@ -101,7 +103,7 @@ function startP5() {
     if (s.filterTime !== undefined) this.state.filterTime = s.filterTime;
     if (s.pinResetToken !== undefined) this.state.pinResetToken = s.pinResetToken;
 
-    // ✅ Stop 2
+    // Stop 2
     if (s.driverYear !== undefined) this.state.driverYear = s.driverYear;
     if (s.driverMode !== undefined) this.state.driverMode = s.driverMode;
     if (s.driverTime !== undefined) this.state.driverTime = s.driverTime;
@@ -127,7 +129,9 @@ function startP5() {
   };
 
   if (window.__sketchAPI && window.__sketchAPI.p5) {
-    try { window.__sketchAPI.p5.remove(); } catch (e) { }
+    try {
+      window.__sketchAPI.p5.remove();
+    } catch (e) {}
     window.__sketchAPI = null;
   }
 
@@ -147,16 +151,24 @@ function startP5() {
   };
 
   if (setDataResult && typeof setDataResult.then === 'function') {
-    api.ready = setDataResult.then(function () { return api; });
+    api.ready = setDataResult.then(function () {
+      return api;
+    });
   } else {
     api.ready = Promise.resolve(api);
   }
 
-  api.ready.then(function () {
-    try { window.__sketchAPI = api; } catch (e) { }
-  }).catch(function () {
-    try { window.__sketchAPI = api; } catch (e) { }
-  });
+  api.ready
+    .then(function () {
+      try {
+        window.__sketchAPI = api;
+      } catch (e) {}
+    })
+    .catch(function () {
+      try {
+        window.__sketchAPI = api;
+      } catch (e) {}
+    });
 
   return api;
 }

@@ -3,297 +3,307 @@
 <head>
   <title>Seattle Crash Hotspots — Interactive Article</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
   <link rel="stylesheet" type="text/css" href="css/style.css" />
 </head>
 
 <body>
-  <div id="graphic">
 
-    <!-- FULL-WIDTH STICKY VIS -->
-    <div id="vis" class="vis-hidden"></div>
+<div id="graphic">
 
-    <!-- SCROLL STEPS -->
-    <div id="sections">
+  <!-- =========================================
+       VIS AREA
+  ========================================= -->
 
-      <section class="step" data-active-index="0">
-        <div class="kicker">Seattle Crash Hotspots</div>
-        <div class="big-question">
-          Where in Seattle is crash risk concentrated, and what can you do about it?
-        </div>
-      
-        <figure class="hero-image">
-          <img
-            src="assets/I-5-and-downtown-Seattle-209762726_xl-2015%20%281%29.png"
-            alt="Interstate 5 and downtown Seattle."
-            loading="lazy"
-            decoding="async"
-          />
-          <figcaption>Seattle’s roads shape how, where, and when crashes happen.</figcaption>
-        </figure>
+  <div id="vis" class="vis-hidden">
 
-        <div class="seatbelt-container">
-          <div class="belt-left" id="belt-left"></div>
-          <div class="belt-right" id="belt-right"></div>
-        </div>
-        <div class="buckle-text" id="buckle-text">Buckle up!</div>
-        
-        <div class="subtext">Scroll to start your route.</div>
-        
-      </section>
+    <!-- p5.js canvas mounts here -->
+    <div id="vis-canvas"></div>
 
-      <section class="step" data-active-index="1">
-        <div class="title">Stop 1</div>
-        <div class="step-body">Where do crashes cluster citywide?</div>
+    <!-- RIGHT SIDEBAR -->
+    <div id="vis-sidebar">
 
-        <div class="viz-cta">
-          <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="1">
-            Open visualization
-          </button>
-          <div class="viz-note">Smooth heatmap + detailed tooltip (streets, crash type, severity, injuries).</div>
+      <div class="sidebar-scroll">
 
-          <!-- Stop 1 Filter Controls -->
-          <div class="viz-controls" id="viz-controls-stop1">
-            <div class="viz-control">
-              <label for="filter-year">Year</label>
-              <select id="filter-year">
-                <option value="all">All (2022–2026)</option>
-                <option value="2022">2022</option>
-                <option value="2023">2023</option>
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-              </select>
-            </div>
+        <!-- Stop 1 Filters -->
+        <div class="viz-controls" id="viz-controls-stop1">
 
-            <div class="viz-control">
-              <label for="filter-severity">Severity</label>
-              <select id="filter-severity">
-                <option value="all">All</option>
-                <option value="fatal">Fatal</option>
-                <option value="serious">Serious Injury</option>
-                <option value="injury">Injury</option>
-                <option value="pdo">Property Damage Only</option>
-              </select>
-            </div>
-
-            <div class="viz-control">
-              <label for="filter-mode">Mode</label>
-              <select id="filter-mode">
-                <option value="all">All crashes</option>
-                <option value="ped">Pedestrian-involved</option>
-                <option value="bike">Bike-involved</option>
-              </select>
-            </div>
-
-            <div class="viz-control">
-              <label for="filter-time">Time</label>
-              <select id="filter-time">
-                <option value="all">All day</option>
-                <option value="morning">Morning (5–10)</option>
-                <option value="midday">Midday (11–15)</option>
-                <option value="evening">Evening (16–20)</option>
-                <option value="night">Night (21–4)</option>
-              </select>
-            </div>
+          <div class="viz-control">
+            <label for="filter-year">Year</label>
+            <select id="filter-year">
+              <option value="all">All (2022–2026)</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+            </select>
           </div>
-          <!-- /Stop 1 filters -->
-        </div>
-      </section>
 
-      <section class="step" data-active-index="2">
-        <div class="title">Stop 2</div>
-        <div class="step-body">What’s driving risk?</div>
-
-        <div class="viz-cta">
-          <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="2">
-            Open visualization
-          </button>
-          <div class="viz-note">Compare speeding, inattention, and under-influence flags (toggle All vs Serious+Fatal).</div>
-
-          <!-- Stop 2 Controls (hidden until viz opens) -->
-          <div class="viz-controls" id="viz-controls-stop2">
-
-            <div class="viz-control">
-              <label for="driver-factor">Factor</label>
-              <select id="driver-factor">
-                <option value="weather">Weather</option>
-                <option value="road">Road condition</option>
-                <option value="light">Light condition</option>
-              </select>
-            </div>
-            
-            <div class="viz-control">
-              <label for="driver-year">Year</label>
-              <select id="driver-year">
-                <option value="all">All (2022–2026)</option>
-                <option value="2022">2022</option>
-                <option value="2023">2023</option>
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-              </select>
-            </div>
-
-            <div class="viz-control">
-              <label for="driver-mode">Mode</label>
-              <select id="driver-mode">
-                <option value="all">All crashes</option>
-                <option value="ped">Pedestrian-involved</option>
-                <option value="bike">Bike-involved</option>
-              </select>
-            </div>
-
-            <div class="viz-control">
-              <label for="driver-time">Time</label>
-              <select id="driver-time">
-                <option value="all">All day</option>
-                <option value="morning">Morning (5–10)</option>
-                <option value="midday">Midday (11–15)</option>
-                <option value="evening">Evening (16–20)</option>
-                <option value="night">Night (21–4)</option>
-              </select>
-            </div>
-
-            <div class="viz-control">
-              <label for="driver-scope">Focus</label>
-              <select id="driver-scope">
-                <option value="all">All crashes</option>
-                <option value="severe">Serious + Fatal only</option>
-              </select>
-            </div>
+          <div class="viz-control">
+            <label for="filter-severity">Severity</label>
+            <select id="filter-severity">
+              <option value="all">All</option>
+              <option value="fatal">Fatal</option>
+              <option value="serious">Serious Injury</option>
+              <option value="injury">Injury</option>
+              <option value="pdo">Property Damage Only</option>
+            </select>
           </div>
-          <!-- /Stop 2 controls -->
-        </div>
-      </section>
 
-      <section class="step" data-active-index="3">
-        <div class="title">Stop 3</div>
-        <div class="step-body">Who is affected?</div>
-
-        <div class="viz-cta">
-          <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="3">
-            Open visualization
-          </button>
-          <div class="viz-note">Compare severity outcomes across pedestrians, cyclists, and other crashes.</div>
-
-          <!-- Stop 3 Controls (hidden until viz opens) -->
-          <div class="viz-controls" id="viz-controls-stop3">
-            <div class="viz-control">
-              <label for="affect-year">Year</label>
-              <select id="affect-year">
-                <option value="all">All (2022–2026)</option>
-                <option value="2022">2022</option>
-                <option value="2023">2023</option>
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-              </select>
-            </div>
-
-            <div class="viz-control">
-              <label for="affect-time">Time</label>
-              <select id="affect-time">
-                <option value="all">All day</option>
-                <option value="morning">Morning (5–10)</option>
-                <option value="midday">Midday (11–15)</option>
-                <option value="evening">Evening (16–20)</option>
-                <option value="night">Night (21–4)</option>
-              </select>
-            </div>
-
-            <div class="viz-control">
-              <label for="affect-metric">Metric</label>
-              <select id="affect-metric">
-                <option value="percent">Percent</option>
-                <option value="count">Count</option>
-              </select>
-            </div>
-
-            <div class="viz-control">
-              <label>Tip</label>
-              <div style="font-size:0.9rem;color:rgba(0,0,0,.65);line-height:1.2;">
-                Hover a segment for details. Click to pin.
-              </div>
-            </div>
+          <div class="viz-control">
+            <label for="filter-mode">Mode</label>
+            <select id="filter-mode">
+              <option value="all">All crashes</option>
+              <option value="ped">Pedestrian-involved</option>
+              <option value="bike">Bike-involved</option>
+            </select>
           </div>
+
+          <div class="viz-control">
+            <label for="filter-time">Time</label>
+            <select id="filter-time">
+              <option value="all">All day</option>
+              <option value="morning">Morning (5–10)</option>
+              <option value="midday">Midday (11–15)</option>
+              <option value="evening">Evening (16–20)</option>
+              <option value="night">Night (21–4)</option>
+            </select>
+          </div>
+
         </div>
-      </section>
 
-      <section class="step" data-active-index="4">
-        <div class="title">Stop 4</div>
-        <div class="step-body">When does crash risk peak across the day and week?</div>
 
-        <div class="viz-cta">
-          <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="4">
-            Open visualization
-          </button>
-          <div class="viz-note">Explore time-of-day and day-of-week patterns (stacked by crash severity).</div>
+        <!-- Stop 2 Controls -->
+        <div class="viz-controls" id="viz-controls-stop2">
+
+          <div class="viz-control">
+            <label for="driver-factor">Factor</label>
+            <select id="driver-factor">
+              <option value="weather">Weather</option>
+              <option value="road">Road condition</option>
+              <option value="light">Light condition</option>
+            </select>
+          </div>
+
+          <div class="viz-control">
+            <label for="driver-year">Year</label>
+            <select id="driver-year">
+              <option value="all">All (2022–2026)</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+            </select>
+          </div>
+
+          <div class="viz-control">
+            <label for="driver-mode">Mode</label>
+            <select id="driver-mode">
+              <option value="all">All crashes</option>
+              <option value="ped">Pedestrian-involved</option>
+              <option value="bike">Bike-involved</option>
+            </select>
+          </div>
+
+          <div class="viz-control">
+            <label for="driver-time">Time</label>
+            <select id="driver-time">
+              <option value="all">All day</option>
+              <option value="morning">Morning (5–10)</option>
+              <option value="midday">Midday (11–15)</option>
+              <option value="evening">Evening (16–20)</option>
+              <option value="night">Night (21–4)</option>
+            </select>
+          </div>
+
+          <div class="viz-control">
+            <label for="driver-scope">Focus</label>
+            <select id="driver-scope">
+              <option value="all">All crashes</option>
+              <option value="severe">Serious + Fatal only</option>
+            </select>
+          </div>
+
         </div>
-      </section>
 
-      <section class="step" data-active-index="5">
-        <div class="title">Stop 5</div>
-        <div class="step-body">Road context + safety tools</div>
 
-        <div class="viz-cta">
-          <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="5">
-            Open visualization
-          </button>
-          <div class="viz-note">Collisions by speed limit (matched to street data); summary + bar chart.</div>
+        <!-- Stop 3 Controls -->
+        <div class="viz-controls" id="viz-controls-stop3">
+
+          <div class="viz-control">
+            <label for="affect-year">Year</label>
+            <select id="affect-year">
+              <option value="all">All (2022–2026)</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+            </select>
+          </div>
+
+          <div class="viz-control">
+            <label for="affect-time">Time</label>
+            <select id="affect-time">
+              <option value="all">All day</option>
+              <option value="morning">Morning (5–10)</option>
+              <option value="midday">Midday (11–15)</option>
+              <option value="evening">Evening (16–20)</option>
+              <option value="night">Night (21–4)</option>
+            </select>
+          </div>
+
+          <div class="viz-control">
+            <label for="affect-metric">Metric</label>
+            <select id="affect-metric">
+              <option value="percent">Percent</option>
+              <option value="count">Count</option>
+            </select>
+          </div>
+
         </div>
-      </section>
 
-      <section class="step" data-active-index="6">
-        <div class="title">Stop 6</div>
-        <div class="step-body">Recap, conclusion &amp; practical advice</div>
+      </div>
 
-        <div class="viz-cta">
-          <button class="viz-toggle btn btn-primary" type="button" data-viz-toggle="6">
-            Open visualization
-          </button>
-          <div class="viz-note">Summary of each stop, main takeaways, and actionable tips for Seattle drivers.</div>
-        </div>
-      </section>
-
-      <div class="end-spacer"></div>
     </div>
   </div>
 
-  <!-- p5.js -->
-  <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
 
-  <!-- helpers -->
-  <script src="js/helpers/data_loader.js"></script>
-  <script src="js/helpers/scroller.js"></script>
-  <script src="js/helpers/visual_controller.js"></script>
+  <!-- =========================================
+       SCROLL SECTIONS
+  ========================================= -->
 
-  <!-- CONFIG -->
-  <script>
-    window.ScrollDemoConfig = {
-      showAt: 1,
-      trigger: 'center',
-      collisionsUrl: 'data/master_collisions_crosswalks_2022_2026.csv'
-    };
-  </script>
+  <div id="sections">
 
-  <!-- orchestrator -->
-  <script src="js/helpers/sections.js"></script>
+    <section class="step" data-active-index="0">
+      <div class="kicker">Seattle Crash Hotspots</div>
 
-  <!-- sketches -->
-  <script src="js/sketches/sketch_manager.js"></script>
+      <div class="big-question">
+        Where in Seattle is crash risk concentrated, and what can you do about it?
+      </div>
 
-  <!-- viz -->
-  <script src="js/sketches/viz/viz_title.js"></script>
-  <script src="js/sketches/viz/viz_road.js"></script>
-  <script src="js/sketches/viz/viz_hotspots.js"></script>
-  <script src="js/sketches/viz/viz_drivers.js"></script> 
-  <script src="js/sketches/viz/viz_affected.js"></script>
-  <script src="js/sketches/viz/viz_time.js"></script>
-  <script src="js/sketches/viz/viz_streetcontext.js"></script>
-  <script src="js/sketches/viz/viz_conclusion.js"></script>
+      <figure class="hero-image">
+        <img
+          src="assets/I-5-and-downtown-Seattle-209762726_xl-2015%20%281%29.png"
+          alt="Interstate 5 and downtown Seattle."
+          loading="lazy"
+        />
+        <figcaption>Seattle’s roads shape how, where, and when crashes happen.</figcaption>
+      </figure>
 
-  <!-- renderer -->
-  <script src="js/sketches/sketch_renderer.js"></script>
+      <div class="subtext">Scroll to start your route.</div>
+    </section>
+
+
+    <section class="step" data-active-index="1">
+      <div class="title">Stop 1</div>
+      <div class="step-body">Where do crashes cluster citywide?</div>
+
+      <div class="viz-cta">
+        <button class="viz-toggle btn btn-primary" data-viz-toggle="1">
+          Open visualization
+        </button>
+      </div>
+    </section>
+
+
+    <section class="step" data-active-index="2">
+      <div class="title">Stop 2</div>
+      <div class="step-body">What’s driving risk?</div>
+
+      <div class="viz-cta">
+        <button class="viz-toggle btn btn-primary" data-viz-toggle="2">
+          Open visualization
+        </button>
+      </div>
+    </section>
+
+
+    <section class="step" data-active-index="3">
+      <div class="title">Stop 3</div>
+      <div class="step-body">Who is affected?</div>
+
+      <div class="viz-cta">
+        <button class="viz-toggle btn btn-primary" data-viz-toggle="3">
+          Open visualization
+        </button>
+      </div>
+    </section>
+
+
+    <section class="step" data-active-index="4">
+      <div class="title">Stop 4</div>
+      <div class="step-body">When does crash risk peak across the day and week?</div>
+
+      <div class="viz-cta">
+        <button class="viz-toggle btn btn-primary" data-viz-toggle="4">
+          Open visualization
+        </button>
+      </div>
+    </section>
+
+
+    <section class="step" data-active-index="5">
+      <div class="title">Stop 5</div>
+      <div class="step-body">Road context + safety tools</div>
+
+      <div class="viz-cta">
+        <button class="viz-toggle btn btn-primary" data-viz-toggle="5">
+          Open visualization
+        </button>
+      </div>
+    </section>
+
+
+    <section class="step" data-active-index="6">
+      <div class="title">Stop 6</div>
+      <div class="step-body">Recap, conclusion & practical advice</div>
+
+      <div class="viz-cta">
+        <button class="viz-toggle btn btn-primary" data-viz-toggle="6">
+          Open visualization
+        </button>
+      </div>
+    </section>
+
+    <div class="end-spacer"></div>
+
+  </div>
+
+</div>
+
+
+<!-- p5 -->
+<script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
+
+<script src="js/helpers/data_loader.js"></script>
+<script src="js/helpers/scroller.js"></script>
+<script src="js/helpers/visual_controller.js"></script>
+
+<script>
+window.ScrollDemoConfig = {
+  showAt: 1,
+  trigger: 'center',
+  collisionsUrl: 'data/master_collisions_crosswalks_2022_2026.csv'
+};
+</script>
+
+<script src="js/helpers/sections.js"></script>
+<script src="js/sketches/sketch_manager.js"></script>
+
+<script src="js/sketches/viz/viz_title.js"></script>
+<script src="js/sketches/viz/viz_road.js"></script>
+<script src="js/sketches/viz/viz_hotspots.js"></script>
+<script src="js/sketches/viz/viz_drivers.js"></script>
+<script src="js/sketches/viz/viz_affected.js"></script>
+<script src="js/sketches/viz/viz_time.js"></script>
+<script src="js/sketches/viz/viz_streetcontext.js"></script>
+<script src="js/sketches/viz/viz_conclusion.js"></script>
+
+<script src="js/sketches/sketch_renderer.js"></script>
+
 </body>
 </html>

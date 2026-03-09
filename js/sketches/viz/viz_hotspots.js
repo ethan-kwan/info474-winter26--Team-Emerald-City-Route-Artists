@@ -86,13 +86,15 @@
     return s.slice(0, maxLen - 1) + "…";
   }
 
-  // Space-saving topK per-cell
   function topKUpdate(list, key, K) {
     if (!key) return;
     K = K || 5;
 
     for (var i = 0; i < list.length; i++) {
-      if (list[i].key === key) { list[i].count += 1; return; }
+      if (list[i].key === key) {
+        list[i].count += 1;
+        return;
+      }
     }
 
     if (list.length < K) {
@@ -119,47 +121,18 @@
     view.ty = clamp(view.ty, minTy, 0);
   }
 
-  // -----------------------
-  // NEW: crash-type glossary
-  // -----------------------
-  function crashTypeGlossary() {
-    return [
-      { key: "Angles", desc: "Two vehicles collide at an angle (often at intersections / turning conflicts)." },
-      { key: "Rear Ended", desc: "One vehicle hits the back of another (often stop-and-go / following too closely)." },
-      { key: "Sideswipe", desc: "Vehicles scrape sides while traveling parallel or changing lanes." },
-      { key: "Head On", desc: "Front-to-front impact (often wrong-way / centerline crossing)." },
-      { key: "Left Turn", desc: "Crash involves a left-turn conflict (turning vehicle vs through traffic)." },
-      { key: "Right Turn", desc: "Crash involves a right-turn conflict (often at corners / merges)." },
-      { key: "Parked Car", desc: "Moving vehicle hits a parked vehicle." },
-      { key: "Pedestrian", desc: "Vehicle-pedestrian collision (crosswalks, mid-block crossings)." },
-      { key: "Cyclist", desc: "Vehicle-bicycle collision (bike lanes, crossings, dooring)." }
-    ];
-  }
-
-  function glossaryLookup() {
-    var list = crashTypeGlossary();
-    var map = {};
-    for (var i = 0; i < list.length; i++) {
-      map[(list[i].key || "").toLowerCase()] = list[i].desc;
-    }
-    return map;
-  }
-
-  // -----------------------
-  // Viz
-  // -----------------------
   window.VizHotspots = {
     _layout: function (p) {
-      var pad = 18;
-      var topBannerH = 106;
+      var pad = 14;
+      var topBannerH = 84;
 
       var left = pad;
       var top = pad + topBannerH;
       var w = p.width - pad * 2;
       var h = p.height - top - pad;
 
-      var sidebarW = (w >= 980) ? 380 : 0;
-      var gap = (sidebarW > 0) ? 14 : 0;
+      var sidebarW = (w >= 1100) ? 300 : 0;
+      var gap = (sidebarW > 0) ? 12 : 0;
       var mapW = w - sidebarW - gap;
 
       var map = { left: left, top: top, w: mapW, h: h };
@@ -215,7 +188,8 @@
         var c = cellMap[k];
         if (!c) {
           c = cellMap[k] = {
-            ix: ix, iy: iy,
+            ix: ix,
+            iy: iy,
             count: 0,
             injuries: 0,
             serious: 0,
@@ -288,7 +262,9 @@
         if (d.inattn) cell.inattn += 1;
         if (d.underinfl) cell.underinfl += 1;
 
-        if ((d.crosswalk_count || 0) > cell.maxCrosswalk) cell.maxCrosswalk = d.crosswalk_count || 0;
+        if ((d.crosswalk_count || 0) > cell.maxCrosswalk) {
+          cell.maxCrosswalk = d.crosswalk_count || 0;
+        }
 
         topKUpdate(cell.topStreets, street, 5);
         topKUpdate(cell.topTypes, d.collisionType, 5);
@@ -298,7 +274,6 @@
 
         if (cell.count > maxCount) maxCount = cell.count;
 
-        // sample points
         seen += 1;
         if (samplePts.length < sampleTarget) {
           samplePts.push({ x: d.x, y: d.y });
@@ -331,9 +306,12 @@
         ready: true,
         cols: cols,
         rows: rows,
-        minX: minX, maxX: maxX,
-        minY: minY, maxY: maxY,
-        dx: dx, dy: dy,
+        minX: minX,
+        maxX: maxX,
+        minY: minY,
+        maxY: maxY,
+        dx: dx,
+        dy: dy,
         maxCount: Math.max(1, maxCount),
         cells: cells,
         countsSorted: counts,
@@ -441,7 +419,6 @@
         view.tx += dx;
         view.ty += dy;
 
-        // allow slight slop
         var minTx = map.w - map.w * view.scale;
         var minTy = map.h - map.h * view.scale;
         var slop = 18;
@@ -459,14 +436,12 @@
       manager._hotspotView = manager._hotspotView || { scale: 1, tx: 0, ty: 0 };
       var view = manager._hotspotView;
 
-      // zoom around map center (stable + simple)
       var oldScale = view.scale;
       var newScale = clamp(oldScale * factor, 1.0, 7.0);
 
       var cx = map.w / 2;
       var cy = map.h / 2;
 
-      // base coord at center before zoom
       var baseX = (cx - view.tx) / oldScale;
       var baseY = (cy - view.ty) / oldScale;
 
@@ -485,11 +460,10 @@
 
       p.background(248, 249, 252);
 
-      // Header strip
       p.push();
       p.noStroke();
       p.fill(255);
-      p.rect(0, 0, p.width, L.topBannerH + 18);
+      p.rect(0, 0, p.width, L.topBannerH + 8);
       p.pop();
 
       if (manager.data && manager.data.loadError) {
@@ -513,21 +487,19 @@
         return;
       }
 
-      // reset pinned if filters changed
       if (manager._pinResetSeen !== manager.state.pinResetToken) {
         manager._pinResetSeen = manager.state.pinResetToken;
         manager._pinnedCellKey = null;
       }
 
-      // Title
       p.push();
       p.fill(18);
       p.textAlign(p.LEFT, p.TOP);
-      p.textSize(18);
-      p.text("Stop 1 — Crash density (zoom + pan)", L.left, 18);
+      p.textSize(16);
+      p.text("Stop 1 — Crash density", L.left, 14);
 
       p.fill(90);
-      p.textSize(12);
+      p.textSize(11);
       var filtersLine =
         "Filters: " +
         (manager.state.filterYear === 'all' ? "All years" : ("Year " + manager.state.filterYear)) + " · " +
@@ -535,15 +507,14 @@
         (manager.state.filterMode === 'all' ? "All modes" : manager.state.filterMode) + " · " +
         (manager.state.filterTime === 'all' ? "All day" : manager.state.filterTime) +
         " — showing " + (agg.summary.total || 0) + " crashes";
-      p.text(filtersLine, L.left, 42);
+      p.text(filtersLine, L.left, 34);
 
-      p.text("Drag to pan · Double-click to reset · Use zoom buttons (+ / −)", L.left, 62);
+      p.text("Drag to pan · Double-click to reset · Zoom with + / −", L.left, 50);
       p.pop();
 
-      // Panels
       p.push();
       p.noStroke();
-      p.fill(230);
+      p.fill(231);
       p.rect(L.map.left, L.map.top, L.map.w, L.map.h, 14);
       if (L.side) {
         p.fill(240);
@@ -551,17 +522,14 @@
       }
       p.pop();
 
-      // Pan / dblclick
       this._handlePanAndDoubleClick(p, manager, L.map);
 
-      // Draw map with transform
       p.push();
       p.translate(L.map.left + view.tx, L.map.top + view.ty);
       p.scale(view.scale);
 
-      // skeleton
       p.push();
-      p.stroke(255, 255, 255, 70);
+      p.stroke(255, 255, 255, 65);
       p.strokeWeight(1);
       for (var sp = 0; sp < agg.samplePts.length; sp++) {
         var pt = agg.samplePts[sp];
@@ -575,7 +543,6 @@
       }
       p.pop();
 
-      // heat
       var maxCount = Math.max(1, agg.maxCount);
       var cellW = L.map.w / agg.cols;
       var cellH = L.map.h / agg.rows;
@@ -590,7 +557,6 @@
 
         var center = this._cellCenterBase(agg, L.map, c.ix, c.iy);
 
-        // ✅ FIX: keep dot size constant on screen by dividing by view.scale
         var rOuter = (baseR * 3.8) / view.scale;
         var rInner = (baseR * 1.6) / view.scale;
 
@@ -604,14 +570,13 @@
       }
       p.pop();
 
-      p.pop(); // end transform
+      p.pop();
 
-      // Legend
       p.push();
       var legX = L.map.left;
-      var legY = L.map.top - 24;
-      var legW = Math.min(260, L.map.w * 0.45);
-      var legH = 10;
+      var legY = L.map.top - 20;
+      var legW = Math.min(240, L.map.w * 0.4);
+      var legH = 9;
 
       for (var px = 0; px < legW; px++) {
         var tt = px / Math.max(1, legW - 1);
@@ -622,22 +587,19 @@
 
       p.noStroke();
       p.fill(90);
-      p.textSize(11);
+      p.textSize(10);
       p.textAlign(p.LEFT, p.BOTTOM);
       p.text("Low", legX, legY - 2);
       p.textAlign(p.RIGHT, p.BOTTOM);
       p.text("High", legX + legW, legY - 2);
       p.pop();
 
-      // Sidebar + buttons
       if (L.side) {
         var s = agg.summary || {};
-        var glossary = glossaryLookup();
 
-        // define buttons
-        var btnReset = { x: L.side.left + 18, y: L.side.top + 18, w: L.side.w - 36, h: 34 };
-        var btnMinus = { x: L.side.left + 18, y: btnReset.y + btnReset.h + 12, w: (L.side.w - 44) / 2, h: 34 };
-        var btnPlus  = { x: btnMinus.x + btnMinus.w + 8, y: btnMinus.y, w: btnMinus.w, h: btnMinus.h };
+        var btnReset = { x: L.side.left + 16, y: L.side.top + 16, w: L.side.w - 32, h: 30 };
+        var btnMinus = { x: L.side.left + 16, y: btnReset.y + btnReset.h + 10, w: (L.side.w - 40) / 2, h: 30 };
+        var btnPlus = { x: btnMinus.x + btnMinus.w + 8, y: btnMinus.y, w: btnMinus.w, h: 30 };
 
         function inRect(mx, my, r) {
           return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
@@ -647,105 +609,88 @@
         var hoverMinus = inRect(p.mouseX, p.mouseY, btnMinus);
         var hoverPlus = inRect(p.mouseX, p.mouseY, btnPlus);
 
-        // click handling (edge)
         if (manager._qsPrevPressed === undefined) manager._qsPrevPressed = false;
         var justPressed = p.mouseIsPressed && !manager._qsPrevPressed;
         manager._qsPrevPressed = p.mouseIsPressed;
 
         if (justPressed) {
-          if (hoverReset) { view.scale = 1; view.tx = 0; view.ty = 0; }
-          if (hoverMinus) { this._applyZoom(manager, L.map, 1 / 1.25); }
-          if (hoverPlus)  { this._applyZoom(manager, L.map, 1.25); }
+          if (hoverReset) {
+            view.scale = 1;
+            view.tx = 0;
+            view.ty = 0;
+          }
+          if (hoverMinus) {
+            this._applyZoom(manager, L.map, 1 / 1.25);
+          }
+          if (hoverPlus) {
+            this._applyZoom(manager, L.map, 1.25);
+          }
         }
 
-        // card
         p.push();
         p.noStroke();
-        p.fill(255, 255, 255, 235);
-        p.rect(L.side.left + 12, L.side.top + 12, L.side.w - 24, L.side.h - 24, 14);
+        p.fill(255, 255, 255, 238);
+        p.rect(L.side.left + 10, L.side.top + 10, L.side.w - 20, L.side.h - 20, 14);
 
-        // Reset button
         p.fill(hoverReset ? 0 : 18, hoverReset ? 120 : 140, 255, hoverReset ? 230 : 215);
-        p.rect(btnReset.x, btnReset.y, btnReset.w, btnReset.h, 12);
+        p.rect(btnReset.x, btnReset.y, btnReset.w, btnReset.h, 11);
         p.fill(255);
         p.textAlign(p.CENTER, p.CENTER);
-        p.textSize(12);
+        p.textSize(11);
         p.text("Reset view", btnReset.x + btnReset.w / 2, btnReset.y + btnReset.h / 2);
 
-        // +/- buttons
         p.fill(hoverMinus ? 30 : 255, hoverMinus ? 150 : 255, hoverMinus ? 255 : 255, 220);
-        p.rect(btnMinus.x, btnMinus.y, btnMinus.w, btnMinus.h, 12);
+        p.rect(btnMinus.x, btnMinus.y, btnMinus.w, btnMinus.h, 11);
         p.fill(hoverMinus ? 255 : 18);
         p.textSize(14);
         p.text("−", btnMinus.x + btnMinus.w / 2, btnMinus.y + btnMinus.h / 2);
 
         p.fill(hoverPlus ? 30 : 255, hoverPlus ? 150 : 255, hoverPlus ? 255 : 255, 220);
-        p.rect(btnPlus.x, btnPlus.y, btnPlus.w, btnPlus.h, 12);
+        p.rect(btnPlus.x, btnPlus.y, btnPlus.w, btnPlus.h, 11);
         p.fill(hoverPlus ? 255 : 18);
         p.text("+", btnPlus.x + btnPlus.w / 2, btnPlus.y + btnPlus.h / 2);
 
-        // zoom readout
         p.fill(90);
-        p.textSize(11);
+        p.textSize(10);
         p.textAlign(p.LEFT, p.TOP);
-        p.text("Zoom: " + view.scale.toFixed(2) + "×", L.side.left + 24, btnPlus.y + btnPlus.h + 10);
+        p.text("Zoom: " + view.scale.toFixed(2) + "×", L.side.left + 20, btnPlus.y + btnPlus.h + 8);
 
-        // stats
-        var y = btnPlus.y + btnPlus.h + 34;
+        var y = btnPlus.y + btnPlus.h + 28;
 
-        p.fill(18);
-        p.textSize(14);
-        p.text("Quick stats (filtered)", L.side.left + 24, y);
-        y += 26;
-
-        p.fill(60);
-        p.textSize(12);
-        p.text("Total crashes: " + (s.total || 0), L.side.left + 24, y); y += 18;
-        p.text("Serious+Fatal: " + (s.severe || 0) + " (" + (s.severePct || 0) + "%)", L.side.left + 24, y); y += 18;
-
-        var topType = (s.topTypes && s.topTypes[0]) ? s.topTypes[0].key : "(Unknown type)";
-        p.text("Most common type: " + shorten(topType, 26), L.side.left + 24, y); y += 22;
-
-        // NEW: crash type key / glossary
         p.fill(18);
         p.textSize(13);
-        p.text("Crash type key:", L.side.left + 24, y);
+        p.text("Quick stats", L.side.left + 20, y);
+        y += 22;
+
+        p.fill(60);
+        p.textSize(11);
+        p.text("Total crashes: " + (s.total || 0), L.side.left + 20, y);
+        y += 16;
+        p.text("Serious + Fatal: " + (s.severe || 0) + " (" + (s.severePct || 0) + "%)", L.side.left + 20, y);
+        y += 24;
+
+        p.fill(18);
+        p.textSize(12);
+        p.text("Top streets", L.side.left + 20, y);
         y += 18;
 
-        p.fill(70);
+        p.fill(60);
         p.textSize(11);
-
-        var keyList = crashTypeGlossary();
-        for (var ki = 0; ki < keyList.length; ki++) {
-          var kitem = keyList[ki];
-          if (y > (L.side.top + L.side.h - 120)) break; // don't overflow
-          p.text("- " + kitem.key + ": " + kitem.desc, L.side.left + 24, y);
+        var topStreets = s.topStreets || [];
+        for (var i = 0; i < Math.min(5, topStreets.length); i++) {
+          var it = topStreets[i];
+          p.text((i + 1) + ". " + shorten(it.key, 22) + " (" + it.count + ")", L.side.left + 20, y);
           y += 16;
         }
 
         y += 10;
         p.fill(90);
-        p.textSize(12);
-        p.text("Top streets:", L.side.left + 24, y); y += 18;
-
-        p.fill(60);
-        p.textSize(12);
-        var topStreets = s.topStreets || [];
-        for (var i = 0; i < Math.min(5, topStreets.length); i++) {
-          var it = topStreets[i];
-          p.text((i + 1) + ". " + shorten(it.key, 24) + " (" + it.count + ")", L.side.left + 24, y);
-          y += 18;
-        }
-
-        y += 10;
-        p.fill(90);
-        p.textSize(11);
-        p.text("Tip: zoom in to inspect corridors like Aurora Ave N.", L.side.left + 24, y);
+        p.textSize(10);
+        p.text("Tip: zoom in to inspect corridors like Aurora Ave N.", L.side.left + 20, y);
 
         p.pop();
       }
 
-      // Tooltip / pin
       var hoverCell = this._hoverCell(p, manager, agg, L.map);
 
       if (manager._prevMousePressedHotspot === undefined) manager._prevMousePressedHotspot = false;
@@ -762,8 +707,11 @@
       }
 
       var active = null;
-      if (manager._pinnedCellKey && agg._cellLookup[manager._pinnedCellKey]) active = agg._cellLookup[manager._pinnedCellKey];
-      else active = hoverCell;
+      if (manager._pinnedCellKey && agg._cellLookup[manager._pinnedCellKey]) {
+        active = agg._cellLookup[manager._pinnedCellKey];
+      } else {
+        active = hoverCell;
+      }
 
       if (!active) return;
 
@@ -787,9 +735,8 @@
 
       var rightLimit = L.side ? (L.side.left - 16) : (p.width - 16);
       var tipX = clamp(anchorX + 16, 16, rightLimit - tipW);
-      var tipY = clamp(anchorY - tipH - 16, L.topBannerH + 18, p.height - tipH - 16);
+      var tipY = clamp(anchorY - tipH - 16, L.topBannerH + 14, p.height - tipH - 16);
 
-      // shadow + box (semi-transparent gray)
       p.push();
       p.noStroke();
       p.fill(0, 0, 0, 12);
