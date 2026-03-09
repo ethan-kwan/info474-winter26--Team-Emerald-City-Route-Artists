@@ -13,9 +13,9 @@
     return true;
   }
   function groupFor(d) {
-    if (d.isPed) return "Pedestrian-involved";
-    if (d.isBike) return "Bike-involved";
-    return "Other crashes";
+    if (d.isPed) return "Pedestrian";
+    if (d.isBike) return "Cyclist";
+    return "Vehicle / Other";
   }
   function bucketFor(d) {
     var sev = (d.severity || "").toLowerCase();
@@ -24,30 +24,47 @@
     if ((d.injuries || 0) > 0 || sev.indexOf("injury") >= 0) return "Injury";
     return "PDO";
   }
+  
+  function describeBucket(b) {
+    if (b === "PDO") return "Property Damage Only: No reported physical injuries, only vehicle or structural damage.";
+    if (b === "Injury") return "Minor/Evident Injury: Physical pain or non-disabling injuries reported.";
+    if (b === "Serious") return "Serious Injury: Life-altering or disabling injuries requiring immediate hospitalization.";
+    if (b === "Fatal") return "Fatal: The crash resulted in at least one death.";
+    return b;
+  }
+
   function topKeyUpdate(map, key) {
-    if (!key) return;
+    if (!key || key === "Unknown" || key === "NULL") return;
     map[key] = (map[key] || 0) + 1;
   }
-  function topKey(map) {
-    var bestK = "";
-    var bestV = -1;
-    Object.keys(map || {}).forEach(function (k) {
-      if (map[k] > bestV) { bestV = map[k]; bestK = k; }
-    });
-    return bestK;
+  
+  function getTopKeys(map, n) {
+    var keys = Object.keys(map || {});
+    keys.sort(function(a, b) { return map[b] - map[a]; });
+    return keys.slice(0, n);
   }
+
   function makeAggKey(state) {
     return [state.affectYear || "all", state.affectTime || "all"].join("|");
   }
+
   function pct(n, d) {
     if (!d) return 0;
     return Math.round((n / d) * 100);
   }
 
+  function formatTimeBucket(tb) {
+    if (tb === "Morning") return "Morning (5A-10A)";
+    if (tb === "Midday") return "Midday (11A-3P)";
+    if (tb === "Evening") return "Evening (4P-8P)";
+    if (tb === "Night") return "Night (9P-4A)";
+    return "Unknown";
+  }
+
   window.VizAffected = {
     _layout: function (p) {
       var pad = 18;
-      var topBannerH = 150;
+      var topBannerH = 140; 
       var left = pad;
       var top = pad + topBannerH;
       var w = p.width - pad * 2;
@@ -68,12 +85,13 @@
       }
       var yearFilter = manager.state.affectYear || "all";
       var timeFilter = manager.state.affectTime || "all";
+      
       var groups = {
-        "Pedestrian-involved": { PDO: 0, Injury: 0, Serious: 0, Fatal: 0, total: 0, topTypes: {} },
-        "Bike-involved":       { PDO: 0, Injury: 0, Serious: 0, Fatal: 0, total: 0, topTypes: {} },
-        "Other crashes":       { PDO: 0, Injury: 0, Serious: 0, Fatal: 0, total: 0, topTypes: {} }
+        "Pedestrian":      { PDO: 0, Injury: 0, Serious: 0, Fatal: 0, total: 0, times: {}, streets: {} },
+        "Cyclist":         { PDO: 0, Injury: 0, Serious: 0, Fatal: 0, total: 0, times: {}, streets: {} },
+        "Vehicle / Other": { PDO: 0, Injury: 0, Serious: 0, Fatal: 0, total: 0, times: {}, streets: {} }
       };
-      var total = 0;
+
       for (var i = 0; i < all.length; i++) {
         var d = all[i];
         if (yearFilter !== "all" && String(d.year) !== String(yearFilter)) continue;
@@ -83,159 +101,215 @@
         var b = bucketFor(d);
         groups[g][b] += 1;
         groups[g].total += 1;
-        total += 1;
-        topKeyUpdate(groups[g].topTypes, d.collisionType);
+        
+        var h = d.hour;
+        var tb = "Night";
+        if (h >= 5 && h <= 10) tb = "Morning";
+        else if (h >= 11 && h <= 15) tb = "Midday";
+        else if (h >= 16 && h <= 20) tb = "Evening";
+        topKeyUpdate(groups[g].times, tb);
+        
+        // Grab street name for location tracking
+        var st = d.streetName || d.location || d.address || "Unknown Location";
+        topKeyUpdate(groups[g].streets, st);
       }
-      var maxTotal = 1;
+
       Object.keys(groups).forEach(function (g) {
-        if (groups[g].total > maxTotal) maxTotal = groups[g].total;
+        groups[g].peakTime = getTopKeys(groups[g].times, 1)[0] || "Unknown";
+        
+        // Get top 3 streets
+        groups[g].topStreets = getTopKeys(groups[g].streets, 3).map(function(k) {
+          return { name: k, count: groups[g].streets[k] };
+        });
       });
-      var rates = {};
-      Object.keys(groups).forEach(function (g) {
-        var severe = (groups[g].Serious + groups[g].Fatal);
-        rates[g] = groups[g].total ? (severe / groups[g].total) : 0;
-      });
-      var worstGroup = "Pedestrian-involved";
-      var worstVal = -1;
-      Object.keys(rates).forEach(function (g) {
-        if (rates[g] > worstVal) { worstVal = rates[g]; worstGroup = g; }
-      });
-      var agg = { ready: true, total: total, groups: groups, maxTotal: maxTotal, rates: rates, worstGroup: worstGroup };
+
+      var agg = { ready: true, groups: groups, maxTotal: 1, total: all.length };
+      Object.keys(groups).forEach(function(k) { if(groups[k].total > agg.maxTotal) agg.maxTotal = groups[k].total; });
       manager.data.affectedCache[key] = agg;
       return agg;
     },
 
     draw: function (p, manager) {
-      var layout = this._layout(p);
-      if (manager._affectPinSeen !== manager.state.affectPinResetToken) {
-        manager._affectPinSeen = manager.state.affectPinResetToken;
-        manager._affectPinned = null;
-      }
-      if (manager._prevMousePressedAffect === undefined) manager._prevMousePressedAffect = false;
-
-      p.background(248, 249, 252);
-      p.push(); p.noStroke(); p.fill(255); p.rect(0, 0, p.width, layout.topBannerH + 18); p.pop();
-
-      if (manager.data && manager.data.loadError) return;
+      var L = this._layout(p);
       var agg = this._computeAgg(manager);
       if (!agg || !agg.ready) return;
 
-      var metric = manager.state.affectMetric || "percent";
+      p.background(248, 249, 252);
+      
+      // Header Banner
+      p.push(); 
+      p.noStroke(); p.fill(255); p.rect(0, 0, p.width, L.topBannerH + 18); 
+      p.pop();
+
+      // Filter Strings
       var fYear = (manager.state.affectYear === "all") ? "All years" : ("Year " + manager.state.affectYear);
       var fTime = (manager.state.affectTime === "all") ? "All day" : manager.state.affectTime;
+      var fMode = manager.state.filterMode === "all" || !manager.state.filterMode ? "All modes" : manager.state.filterMode;
+      var fSev = manager.state.filterSeverity === "all" || !manager.state.filterSeverity ? "All severities" : manager.state.filterSeverity;
 
+      // Titles & Context
       p.push();
-      p.fill(18); p.textAlign(p.LEFT, p.TOP); p.textSize(20);
-      p.text("Stop 3 — Who is affected?", layout.left, 18);
-      p.fill(90); p.textSize(12);
-      p.text("Compare severity outcomes across pedestrians, cyclists, and other crashes.", layout.left, 46);
-      p.text("Filters: " + fYear + " · " + fTime + " — showing " + agg.total + " crashes · Metric: " + (metric === "count" ? "Count" : "Percent"), layout.left, 66);
+      p.fill(18); p.textAlign(p.LEFT, p.TOP); p.textSize(22); p.textStyle(p.BOLD);
+      p.text("Stop 3 — Who bears the most risk?", L.left, 18);
       
-      var severePed = pct(agg.groups["Pedestrian-involved"].Serious + agg.groups["Pedestrian-involved"].Fatal, agg.groups["Pedestrian-involved"].total);
-      var severeBike = pct(agg.groups["Bike-involved"].Serious + agg.groups["Bike-involved"].Fatal, agg.groups["Bike-involved"].total);
-      var severeOther = pct(agg.groups["Other crashes"].Serious + agg.groups["Other crashes"].Fatal, agg.groups["Other crashes"].total);
-      var insight = "What to notice: Serious + Fatal share is highest for " + agg.worstGroup + " (Ped " + severePed + "% · Bike " + severeBike + "% · Other " + severeOther + "%).";
+      p.fill(110); p.textSize(12); p.textStyle(p.NORMAL);
+      p.text("Filters: " + fYear + " · " + fSev + " · " + fMode + " · " + fTime + " — showing " + agg.total.toLocaleString() + " crashes.", L.left, 46);
       
-      p.noStroke(); p.fill(0, 112, 243, 20); p.rect(layout.left, 88, Math.min(920, layout.w), 34, 12);
-      p.fill(18); p.textSize(12); p.text(insight, layout.left + 12, 97); p.pop();
+      p.fill(70); p.textSize(13); 
+      p.text("Context: Vehicles provide structural armor for their occupants. Pedestrians and cyclists do not have this protection. This reveals the 'vulnerability gap' by comparing outcomes.", L.left, 68, L.w - 10, 60);
+      p.pop();
 
-      p.push(); p.noStroke(); p.fill(255); p.rect(layout.left, layout.top, layout.w, layout.h, 16); p.pop();
+      // Main Background
+      p.push(); p.noStroke(); p.fill(235); p.rect(L.left, L.top, L.w, L.h, 16); p.pop();
 
-      var chartPad = 26;
-      var x0 = layout.left + chartPad, y0 = layout.top + chartPad;
-      var cw = layout.w - chartPad * 2, ch = layout.h - chartPad * 2;
-      var chartH = Math.min(320, ch * 0.48);
-      var labelW = Math.min(240, cw * 0.32);
-      var barX = x0 + labelW, barWMax = cw - labelW - 16;
-      var groupsOrder = ["Pedestrian-involved", "Bike-involved", "Other crashes"], bucketOrder = ["PDO", "Injury", "Serious", "Fatal"];
-      var colPDO = [214, 214, 214, 255], colInj = [160, 215, 255, 240], colSer = [0, 112, 243, 240], colFat = [255, 90, 90, 245];
+      var x0 = L.left + 26, y0 = L.top + 26;
+      var cw = L.w - 52, ch = L.h - 52;
+      
+      // CARDS AREA: Pushed to 76% height to accommodate multi-line street text
+      var cardAreaH = ch * 0.76; 
+      var gap = 18;
+      var cardW = (cw - (gap * 2)) / 3;
 
-      function fillBucket(b) {
-        if (b === "PDO") p.fill(colPDO[0], colPDO[1], colPDO[2], colPDO[3]);
-        if (b === "Injury") p.fill(colInj[0], colInj[1], colInj[2], colInj[3]);
-        if (b === "Serious") p.fill(colSer[0], colSer[1], colSer[2], colSer[3]);
-        if (b === "Fatal") p.fill(colFat[0], colFat[1], colFat[2], colFat[3]);
-      }
+      var groupsOrder = ["Pedestrian", "Cyclist", "Vehicle / Other"];
+      var bucketOrder = ["PDO", "Injury", "Serious", "Fatal"];
+      var hitboxes = [];
 
-      if (metric !== "count") {
-        p.push(); p.stroke(240); p.strokeWeight(1);
-        var ticks = [0, 25, 50, 75, 100];
-        for (var ti = 0; ti < ticks.length; ti++) {
-          var t = ticks[ti] / 100, gx = barX + t * barWMax;
-          p.line(gx, y0 + 44, gx, y0 + 44 + chartH);
-          p.noStroke(); p.fill(120); p.textAlign(p.CENTER, p.BOTTOM); p.textSize(11);
-          p.text(ticks[ti] + "%", gx, y0 + 40); p.stroke(240);
-        }
-        p.pop();
-      }
-
-      var rowH = 86, startY = y0 + 54, hitboxes = [];
       for (var gi = 0; gi < groupsOrder.length; gi++) {
         var gname = groupsOrder[gi], g = agg.groups[gname];
-        var y = startY + gi * rowH, barH = 28;
-        var severe = (g.Serious + g.Fatal), severePct = pct(severe, g.total);
+        var cx = x0 + (gi * (cardW + gap));
+        var severe = (g.Serious + g.Fatal);
+        var severePct = pct(severe, Math.max(1, g.total));
 
-        p.push(); p.fill(18); p.textAlign(p.LEFT, p.TOP); p.textSize(13); p.text(gname, x0, y - 2);
-        var badgeW = 140, badgeH = 22;
-        p.noStroke(); p.fill(0, 0, 0, 8); p.rect(x0, y + 18, badgeW, badgeH, 999);
-        p.fill(60); p.textSize(11); p.textAlign(p.LEFT, p.CENTER); p.text("Serious+Fatal: " + severePct + "%", x0 + 10, y + 18 + badgeH / 2); p.pop();
+        // Card Base
+        p.fill(255); p.noStroke(); p.rect(cx, y0, cardW, cardAreaH, 16);
 
-        p.push(); p.noStroke(); p.fill(245); p.rect(barX, y + 6, barWMax, barH, 999); p.pop();
-        var total = Math.max(1, g.total), baseW = (metric === "count") ? (g.total / agg.maxTotal) * barWMax : barWMax, curX = barX;
+        // Header
+        p.textAlign(p.CENTER, p.TOP); p.fill(40); p.textSize(17); p.textStyle(p.BOLD);
+        p.text(gname, cx + cardW/2, y0 + 16);
+        p.fill(severePct > 10 ? [210, 50, 60] : 100); p.textSize(40);
+        p.text(severePct + "%", cx + cardW/2, y0 + 38);
+        p.fill(120); p.textSize(11); p.textStyle(p.NORMAL);
+        p.text("Serious/Fatal Rate", cx + cardW/2, y0 + 82);
+
+        // Vertical Bars
+        var barBottom = y0 + cardAreaH - 185; 
+        var maxBarH = cardAreaH - 300; 
+        var barW = 75;
+        var bx = cx + (cardW / 2) - (barW / 2);
+        var metric = manager.state.affectMetric || "percent";
+        var totalHeight = (metric === "count") ? (g.total / Math.max(1, agg.maxTotal)) * maxBarH : maxBarH;
+        if (metric === "count" && totalHeight < 15 && g.total > 0) totalHeight = 15;
+
+        var curY = barBottom;
         for (var bi = 0; bi < bucketOrder.length; bi++) {
-          var b = bucketOrder[bi], cnt = g[b] || 0, segW = (cnt / total) * baseW;
-          if (segW < 0.5) continue;
-          p.push(); p.noStroke(); fillBucket(b); p.rect(curX, y + 6, segW, barH); p.pop();
-          p.push(); p.stroke(255); p.strokeWeight(1); p.line(curX, y + 6, curX, y + 6 + barH); p.pop();
-          hitboxes.push({ group: gname, bucket: b, x: curX, y: y + 6, w: segW, h: barH, count: cnt, total: g.total, severe: severe, topType: topKey(g.topTypes) });
-          curX += segW;
+          var b = bucketOrder[bi], cnt = g[b] || 0;
+          var segH = (cnt / Math.max(1, g.total)) * totalHeight;
+          if (segH < 1 && cnt > 0) segH = 2;
+          if (segH < 1) continue;
+          curY -= segH;
+          p.noStroke();
+          if (b === "PDO") p.fill(220); else if (b === "Injury") p.fill(120, 180, 220);
+          else if (b === "Serious") p.fill(240, 130, 70); else p.fill(210, 50, 60);
+          p.rect(bx, curY, barW, segH);
+          p.stroke(255); p.strokeWeight(2); p.line(bx, curY+segH, bx+barW, curY+segH);
+          
+          hitboxes.push({ group: gname, bucket: b, x: bx, y: curY, w: barW, h: segH, count: cnt, total: g.total, severe: severe });
         }
-        p.push(); p.noFill(); p.stroke(255, 255, 255, 0); p.rect(barX, y + 6, baseW, barH, 999); p.pop();
-        p.push(); p.fill(60); p.textAlign(p.RIGHT, p.CENTER); p.textSize(12); p.text(g.total + " crashes", barX + barWMax, y + 6 + barH / 2); p.pop();
+
+        // Card Footer: Data Insights & Locations
+        p.noStroke(); p.textAlign(p.CENTER, p.TOP);
+        p.fill(120); p.textSize(11);
+        p.text(g.total.toLocaleString() + " crashes", cx + cardW/2, barBottom + 12);
+        p.fill(severePct > 10 ? [210, 50, 60] : 80); p.textStyle(p.BOLD);
+        p.text(severe.toLocaleString() + " severe injuries", cx + cardW/2, barBottom + 28);
+        p.fill(100); p.textStyle(p.NORMAL); p.textSize(10);
+        p.text("Peak: " + formatTimeBucket(g.peakTime), cx + cardW/2, barBottom + 46);
+        
+        // High Injury Streets
+        p.fill(40); p.textStyle(p.BOLD); p.text("Top Incident Locations:", cx + cardW/2, barBottom + 72);
+        p.textStyle(p.NORMAL); p.fill(100); p.textSize(10);
+        
+        var streetY = barBottom + 88;
+        for (var s = 0; s < g.topStreets.length; s++) {
+          var stObj = g.topStreets[s];
+          if (!stObj) continue;
+          
+          // Removed the count per the user request
+          var stTxt = (s+1) + ". " + stObj.name; 
+          
+          // Use bounding box so long street names wrap naturally without cutting off
+          p.text(stTxt, cx + 10, streetY, cardW - 20, 28); 
+          streetY += 26; 
+        }
       }
 
-      var legendY = startY + groupsOrder.length * rowH + 14;
-      var legend = [{ k: "PDO", c: colPDO }, { k: "Injury", c: colInj }, { k: "Serious", c: colSer }, { k: "Fatal", c: colFat }];
-      p.push(); p.textAlign(p.LEFT, p.CENTER); p.textSize(12); var lx = x0;
+      // Legend
+      var legendY = y0 + cardAreaH + 12;
+      var legend = [{ k: "PDO (Property Damage)", c: [220, 222, 228] }, { k: "Minor Injury", c: [120, 180, 220] }, { k: "Serious Injury", c: [240, 130, 70] }, { k: "Fatal", c: [210, 50, 60] }];
+      p.push(); p.textAlign(p.LEFT, p.CENTER); p.textSize(11); var lx = x0;
       for (var li = 0; li < legend.length; li++) {
-        var it = legend[li], pillW = 92, pillH = 26;
-        p.noStroke(); p.fill(245); p.rect(lx, legendY, pillW, pillH, 999);
-        p.fill(it.c[0], it.c[1], it.c[2], it.c[3]); p.rect(lx + 10, legendY + 8, 10, 10, 3);
-        p.fill(60); p.text(it.k, lx + 26, legendY + pillH / 2); lx += pillW + 10;
+        p.fill(255, 180); p.rect(lx, legendY, p.textWidth(legend[li].k)+30, 22, 999);
+        p.fill(legend[li].c); p.rect(lx + 8, legendY + 6, 10, 10, 2);
+        p.fill(60); p.text(legend[li].k, lx + 22, legendY + 11); lx += p.textWidth(legend[li].k)+38;
       }
       p.pop();
 
-      function findHover(mx, my) {
-        for (var i = 0; i < hitboxes.length; i++) {
-          var hb = hitboxes[i];
-          if (mx >= hb.x && mx <= hb.x + hb.w && my >= hb.y && my <= hb.y + hb.h) return hb;
-        } return null;
+      // Tooltip logic
+      var hover = null;
+      for (var h = 0; h < hitboxes.length; h++) {
+        var hb = hitboxes[h];
+        if (p.mouseX >= hb.x && p.mouseX <= hb.x + hb.w && p.mouseY >= hb.y && p.mouseY <= hb.y + hb.h) hover = hb;
       }
-      var hover = findHover(p.mouseX, p.mouseY), justPressed = p.mouseIsPressed && !manager._prevMousePressedAffect;
-      if (justPressed) { if (manager._affectPinned) manager._affectPinned = null; else if (hover) manager._affectPinned = hover; }
+      if (p.mouseIsPressed && !manager._prevMousePressedAffect) manager._affectPinned = hover;
       manager._prevMousePressedAffect = p.mouseIsPressed;
       var active = manager._affectPinned || hover;
+
       if (active) {
-        p.push(); p.noFill(); p.stroke(18, 18, 18, 190); p.strokeWeight(2); p.rect(active.x, active.y, active.w, active.h, 6); p.pop();
-        var tipW = 380, tipH = 176, ax = manager._affectPinned ? (active.x + active.w / 2) : p.mouseX, ay = manager._affectPinned ? (active.y + active.h / 2) : p.mouseY;
-        var tipX = clamp(ax + 16, layout.left + 16, layout.left + layout.w - tipW - 16), tipY = clamp(ay - tipH - 16, layout.top + 16, layout.top + layout.h - tipH - 16);
-        p.push(); p.noStroke(); p.fill(0, 0, 0, 12); p.rect(tipX + 3, tipY + 4, tipW, tipH, 14); p.pop();
-        p.push(); p.noStroke(); p.fill(255, 255, 255, 245); p.rect(tipX, tipY, tipW, tipH, 14);
-        p.stroke(230); p.strokeWeight(1); p.rect(tipX, tipY, tipW, tipH, 14);
-        var segPct = pct(active.count, active.total), severePct2 = pct(active.severe, active.total), tt = active.topType ? active.topType : "(unknown)";
-        p.fill(18); p.textAlign(p.LEFT, p.TOP); p.textSize(13); p.noStroke(); p.text((manager._affectPinned ? "Pinned" : "Hover") + " — " + active.group, tipX + 14, tipY + 12);
-        p.fill(60); p.textSize(12); p.text("Segment: " + active.bucket, tipX + 14, tipY + 38); p.text("Count: " + active.count + " (" + segPct + "% of this group)", tipX + 14, tipY + 60); p.text("Serious+Fatal rate (group): " + severePct2 + "%", tipX + 14, tipY + 82);
-        p.fill(90); p.textSize(11); p.text("Most common crash type (group): " + tt, tipX + 14, tipY + 108); p.text("Click to pin/unpin. Use filters to compare years + times.", tipX + 14, tipY + 130); p.pop();
+        p.push();
+        var tipW = 340, tipH = 150;
+        
+        // Ensure tooltip stays securely within canvas bounds
+        var tipX = clamp(p.mouseX + 15, 10, p.width - tipW - 10);
+        var tipY = clamp(p.mouseY - tipH - 15, 10, p.height - tipH - 10);
+        
+        // Draw tooltip background
+        p.fill(255, 250); p.stroke(200); p.strokeWeight(1); 
+        p.rect(tipX, tipY, tipW, tipH, 12);
+        
+        // FORCE left/top alignment for tooltip text, resetting whatever the cards used
+        p.noStroke(); p.textAlign(p.LEFT, p.TOP); 
+        p.fill(18); p.textStyle(p.BOLD); p.textSize(14);
+        p.text((manager._affectPinned ? "📌 Pinned: " : "") + active.group + " - " + active.bucket, tipX + 15, tipY + 15);
+        
+        p.textStyle(p.NORMAL); p.fill(60); p.textSize(12);
+        p.text(describeBucket(active.bucket), tipX + 15, tipY + 40, tipW - 30, 40);
+        
+        var segPct = pct(active.count, Math.max(1, active.total));
+        p.text("Volume: " + active.count.toLocaleString() + " crashes (" + segPct + "%)", tipX + 15, tipY + 90);
+        
+        p.fill(120); p.textSize(11); 
+        p.text("Click to pin. Change filters to update data.", tipX + 15, tipY + 115);
+        p.pop();
       }
 
-      var panelX = x0, panelY = y0 + 44 + Math.max(320, chartH) + 22, panelW = cw, panelH = Math.min(220, layout.top + layout.h - panelY - 22);
-      if (panelH > 120) {
-        p.push(); p.noStroke(); p.fill(255); p.rect(panelX, panelY, panelW, panelH, 16);
-        p.fill(18); p.textAlign(p.LEFT, p.TOP); p.textSize(14); p.text("How to read this", panelX + 16, panelY + 14);
-        p.fill(60); p.textSize(12); p.text("Each row is a crash group (pedestrian, bike, or other). The bar shows the share of outcomes.\nFocus on the right side (Serious + Fatal) to compare how risky crashes are for different users.\nTry switching Year to see whether these patterns change over time.", panelX + 16, panelY + 40);
-        p.fill(18); p.textSize(12); p.text("Quick takeaways:", panelX + 16, panelY + 110);
-        p.fill(60); p.text("- Pedestrian-involved crashes usually have the highest severe share.\n- Bike-involved crashes often sit in the middle.\n- “Other crashes” are most common but typically less severe (more PDO).", panelX + 16, panelY + 132); p.pop();
-      }
+      // Narrative Panel
+      var panelY = legendY + 38;
+      var pedRisk = pct(agg.groups["Pedestrian"].Serious + agg.groups["Pedestrian"].Fatal, Math.max(1, agg.groups["Pedestrian"].total));
+      var vehRisk = pct(agg.groups["Vehicle / Other"].Serious + agg.groups["Vehicle / Other"].Fatal, Math.max(1, agg.groups["Vehicle / Other"].total));
+      var mult = vehRisk > 0 ? (pedRisk / vehRisk).toFixed(1) : "N/A";
+
+      p.push(); // Wrap inside a push to ensure alignment settings do not leak
+      p.noStroke();
+      p.fill(255, 180); p.rect(x0, panelY, cw, 90, 16);
+      
+      // Explicitly force left-alignment so the text doesn't slide off the left edge
+      p.textAlign(p.LEFT, p.TOP);
+      p.fill(18); p.textStyle(p.BOLD); p.textSize(15); 
+      p.text("The Vulnerability Gap", x0 + 18, panelY + 18);
+      
+      p.textStyle(p.NORMAL); p.fill(40); p.textSize(13);
+      p.text("A pedestrian is " + mult + "x more likely to be seriously injured than a vehicle occupant. Focus safety improvements on the high-incident streets listed in the cards above.", x0 + 18, panelY + 42, cw - 36);
+      p.pop();
     }
   };
 })();
