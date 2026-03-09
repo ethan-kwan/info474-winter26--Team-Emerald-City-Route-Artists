@@ -2,8 +2,10 @@
 // Stop 6: Recap of each visualization, conclusion, and practical advice for Seattle drivers.
 (function () {
   window.VizConclusion = {
+    _clickDebounce: false, // Prevents multiple rapid fires on a single click
+
     _layout: function (p) {
-      var pad = 14;
+      var pad = 24; 
       var topBannerH = 72;
       var left = pad;
       var top = pad + topBannerH;
@@ -14,101 +16,234 @@
 
     draw: function (p, manager) {
       var L = this._layout(p);
+      
       p.background(248, 249, 252);
 
+      // --- Header Banner ---
       p.push();
       p.noStroke();
       p.fill(255);
-      p.rect(0, 0, p.width, L.topBannerH + 12);
-      p.pop();
+      p.rect(0, 0, p.width, L.topBannerH);
+      p.stroke(230);
+      p.line(0, L.topBannerH, p.width, L.topBannerH); 
 
-      // Title
-      p.push();
       p.fill(18);
       p.textAlign(p.LEFT, p.TOP);
       p.textSize(20);
       p.text("Stop 6 - Recap & conclusion", L.left, 14);
       p.fill(90);
       p.textSize(12);
-      p.text("A summary of insights from the route and practical advice for driving in Seattle.", L.left, 44);
+      p.text("A summary of key metrics and actionable advice for navigating Seattle safely.", L.left, 44);
       p.pop();
 
-      var cardX = L.left;
-      var cardW = L.w;
-      var ix = cardX + 16;
-      var iw = cardW - 32;
-      var lineH = 18;
-      var sectionGap = 20;
-      var y = L.top + 12;
+      var startX = L.left;
+      var y = L.top + 16;
+      var mainW = L.w;
 
-      // ----- Recap: What we learned -----
-      var recapH = 200;
       p.push();
-      p.noStroke();
-      p.fill(255, 255, 255, 200);
-      p.rect(cardX, y, cardW, recapH, 12);
-      p.fill(18);
       p.textAlign(p.LEFT, p.TOP);
-      p.textSize(14);
-      p.text("Recap: What we learned", ix, y + 14);
-      p.fill(60);
-      p.textSize(11);
-      var recapY = y + 36;
-      p.text("Stop 1 - Where crashes cluster: A heatmap shows crash density across the city. Hotspots concentrate along major corridors (e.g. I-5, downtown, Aurora). Filter by year, severity, mode (ped/bike), and time to see where risk is highest.", ix, recapY, iw, 52);
-      recapY += 56;
-      p.text("Stop 2 - What's driving risk: Charts compare how weather, road condition, and light condition relate to crash severity. Conditions like dark or wet roads often associate with a higher share of serious outcomes.", ix, recapY, iw, 38);
-      recapY += 42;
-      p.text("Stop 3 - Who is affected: Stacked bars break down pedestrian-involved, bike-involved, and other crashes by severity (PDO, Injury, Serious, Fatal). Vulnerable users often show a higher proportion of serious outcomes.", ix, recapY, iw, 38);
-      recapY += 42;
-      p.text("Stop 4 - When risk peaks: Time-of-day and day-of-week charts show when crashes are most frequent. Late-night hours and Fridays stand out as high-risk periods.", ix, recapY, iw, 32);
-      recapY += 36;
-      p.text("Stop 5 - Road context: Crashes per 100 street segments by speed limit (normalized) show that mid-range speeds (35–45 mph) concentrate the most crashes; 45 mph roads are especially notable.", ix, recapY, iw, 32);
+
+      // --- SECTION 1: DATA-RICH RECAP CARDS ---
+      p.fill(18);
+      p.textSize(16);
+      p.text("The Route: Key Metrics by Stop", startX, y);
+      y += 32;
+
+      // Notice the added 'stepIndex' to link to your HTML data-active-index
+      var recaps = [
+        { stepIndex: 1, s: "Stop 1", t: "Where crashes cluster", d: "Hotspots concentrate along major corridors like I-5, downtown, and Aurora.", stat: "26,138 Total Crashes", c: [66, 133, 244] }, 
+        { stepIndex: 2, s: "Stop 2", t: "What's driving risk", d: "Conditions like dark or wet roads associate with higher serious outcomes.", stat: "6.6% Severe in Dark", c: [234, 67, 53] }, 
+        { stepIndex: 3, s: "Stop 3", t: "Who is affected", d: "Pedestrians and cyclists show a massive vulnerability gap.", stat: "13x Risk for Pedestrians", c: [251, 188, 4] }, 
+        { stepIndex: 4, s: "Stop 4", t: "When risk peaks", d: "Late-night hours and Fridays stand out as specific high-risk time periods.", stat: "5,807 Midnight Crashes", c: [52, 168, 83] }, 
+        { stepIndex: 5, s: "Stop 5", t: "Road context", d: "Mid-range speeds (35–45 mph) concentrate the most crashes per segment.", stat: "45 mph = Highest Rate", c: [142, 36, 170] } 
+      ];
+
+      var gap = 16;
+      var cols = mainW > 900 ? 3 : 2; 
+      var cardW = (mainW - (cols - 1) * gap) / cols;
+      var cardH = 120; 
+
+      // 1. Calculate the center points of all cards for the "Road"
+      var cardCenters = [];
+      for (var i = 0; i < recaps.length; i++) {
+        var col = i % cols;
+        var row = Math.floor(i / cols);
+        var cx = startX + col * (cardW + gap);
+        var cy = y + row * (cardH + gap);
+        cardCenters.push({ x: cx + cardW / 2, y: cy + cardH / 2, rx: cx, ry: cy });
+      }
+
+      // 2. Draw the "Road" connecting the stops (Behind the cards)
+      p.push();
+      p.noFill();
+      // Base asphalt layer
+      p.stroke(200, 205, 215);
+      p.strokeWeight(12);
+      p.strokeJoin(p.ROUND);
+      p.beginShape();
+      for (var k = 0; k < cardCenters.length; k++) {
+        p.vertex(cardCenters[k].x, cardCenters[k].y);
+      }
+      p.endShape();
+      
+      // Dashed center line layer
+      p.stroke(255);
+      p.strokeWeight(2);
+      p.drawingContext.setLineDash([8, 8]); // Native HTML canvas dashing
+      p.beginShape();
+      for (var k = 0; k < cardCenters.length; k++) {
+        p.vertex(cardCenters[k].x, cardCenters[k].y);
+      }
+      p.endShape();
+      p.drawingContext.setLineDash([]); // Reset dash so it doesn't affect cards
       p.pop();
-      y += recapH + sectionGap;
 
-      // ----- Conclusion -----
-      var conclH = 88;
-      p.push();
-      p.noStroke();
-      p.fill(255, 255, 255, 200);
-      p.rect(cardX, y, cardW, conclH, 12);
-      p.fill(18);
-      p.textAlign(p.LEFT, p.TOP);
-      p.textSize(14);
-      p.text("Conclusion", ix, y + 14);
-      p.fill(60);
-      p.textSize(11);
-      p.text(
-        "Crash risk in Seattle is not random: it concentrates in certain places (hotspots and major roads), at certain times (late night and weekends), and under certain conditions (dark, wet, or inattentive driving). " +
-        "Roads with moderate to high speed limits (35–45 mph) see the most crashes per mile of road, and vulnerable road users bear a disproportionate share of serious harm. " +
-        "Together, this suggests that small changes in where, when, and how we drive can meaningfully reduce risk for everyone.",
-        ix, y + 38, iw, conclH - 44
-      );
-      p.pop();
-      y += conclH + sectionGap;
+      // 3. Draw the Cards
+      var isAnyHovered = false;
 
-      // ----- Practical advice for Seattle drivers -----
-      var adviceH = 200;
-      p.push();
+      for (var i = 0; i < recaps.length; i++) {
+        var center = cardCenters[i];
+        var cx = center.rx;
+        var cy = center.ry;
+
+        var isHover = p.mouseX > cx && p.mouseX < cx + cardW && p.mouseY > cy && p.mouseY < cy + cardH;
+
+        if (isHover) {
+          isAnyHovered = true;
+          p.fill(252, 254, 255);
+          p.stroke(recaps[i].c[0], recaps[i].c[1], recaps[i].c[2]); 
+          
+          // --- CLICK HANDLING ---
+          if (p.mouseIsPressed && !this._clickDebounce) {
+            this._clickDebounce = true;
+            // Find the section in the HTML sidebar and scroll to it
+            var targetSection = document.querySelector('section[data-active-index="' + recaps[i].stepIndex + '"]');
+            if (targetSection) {
+              targetSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        } else {
+          p.fill(255);
+          p.stroke(225);
+        }
+        
+        p.rect(cx, cy, cardW, cardH, 8);
+
+        // Color accent line
+        p.noStroke();
+        p.fill(recaps[i].c[0], recaps[i].c[1], recaps[i].c[2]);
+        p.rect(cx, cy, 5, cardH, 8, 0, 0, 8);
+
+        // Stop Number
+        p.fill(140);
+        p.textSize(11);
+        p.text(recaps[i].s, cx + 18, cy + 14);
+
+        // Title
+        p.fill(18);
+        p.textSize(14);
+        p.text(recaps[i].t, cx + 18, cy + 30);
+
+        // Key Metric
+        p.fill(recaps[i].c[0], Math.max(0, recaps[i].c[1]-30), Math.max(0, recaps[i].c[2]-30)); 
+        p.textSize(12);
+        p.textStyle(p.BOLD);
+        p.text(recaps[i].stat, cx + 18, cy + 50);
+        p.textStyle(p.NORMAL);
+
+        // Description
+        p.fill(80);
+        p.textSize(11);
+        p.textLeading(15);
+        p.text(recaps[i].d, cx + 18, cy + 68, cardW - 30, 40);
+
+        // Action Link
+        p.fill(isHover ? 18 : 160);
+        p.textSize(10);
+        p.text("Return to Stop →", cx + 18, cy + cardH - 20);
+      }
+
+      // Change cursor to pointer if hovering over any clickable card
+      if (isAnyHovered) {
+        p.cursor(p.HAND);
+      } else {
+        p.cursor(p.ARROW);
+      }
+
+      // Reset debounce when mouse is released
+      if (!p.mouseIsPressed) {
+        this._clickDebounce = false;
+      }
+
+      var numRows = Math.ceil(recaps.length / cols);
+      y += numRows * (cardH + gap) + 24;
+
+      // --- SECTION 2: CONCLUSION BANNER ---
+      var conclH = 90;
+      p.fill(240, 246, 255); 
+      p.stroke(210, 228, 255);
+      p.rect(startX, y, mainW, conclH, 8);
+
       p.noStroke();
-      p.fill(255, 255, 255, 200);
-      p.rect(cardX, y, cardW, adviceH, 12);
-      p.fill(18);
-      p.textAlign(p.LEFT, p.TOP);
+      p.fill(30, 90, 180); 
       p.textSize(14);
-      p.text("Practical advice for Seattle drivers", ix, y + 14);
-      p.fill(60);
-      p.textSize(11);
-      var ay = y + 38;
-      p.text("- Plan around hotspots: When you can, avoid or slow down through known high-crash corridors (downtown, I-5 exits, Aurora, and busy arterials).", ix, ay, iw, 36);
-      ay += 40;
-      p.text("- Time your trip: Late-night and Friday driving carry higher crash rates. If you can, travel during lower-risk hours or allow extra following distance and focus during peak-risk times.", ix, ay, iw, 40);
-      ay += 44;
-      p.text("- Respect conditions: Rain and darkness increase severity. Use headlights, slow down, and increase following distance in bad weather or at night.", ix, ay, iw, 36);
-      ay += 40;
-      p.text("- Watch for people: Pedestrian and bike-involved crashes often have worse outcomes. In dense or mixed-use areas, slow down, avoid distractions, and expect people at crosswalks and bike lanes.", ix, ay, iw, 40);
-      ay += 44;
-      p.text("- Ease off on faster roads: 35–45 mph roads see the most crashes per segment. Obey speed limits, avoid speeding through these zones, and stay alert for conflicts and merging traffic.", ix, ay, iw, 36);
+      p.textStyle(p.BOLD);
+      p.text("The Destination: The Bottom Line", startX + 24, y + 16);
+      p.textStyle(p.NORMAL);
+
+      p.fill(40, 50, 70);
+      p.textSize(13);
+      p.textLeading(20);
+      var conclusionText = "Crash risk in Seattle is predictable: it concentrates on 35–45 mph arterials, peaks late at night, and disproportionately harms vulnerable users in dark/wet conditions. Targeted infrastructure changes and driver awareness in these specific contexts can meaningfully reduce city-wide risk.";
+      p.text(conclusionText, startX + 24, y + 38, mainW - 48, conclH - 45);
+
+      y += conclH + 32;
+
+      // --- SECTION 3: PRACTICAL ADVICE ---
+      p.fill(18);
+      p.textSize(16);
+      p.text("Practical Advice for Drivers", startX, y);
+      y += 32;
+
+      var advice = [
+        { t: "Plan around hotspots", d: "Avoid or slow down through downtown, I-5 exits, and Aurora Ave." },
+        { t: "Time your trip", d: "Allow extra distance and caution during late-night and Friday peaks." },
+        { t: "Respect conditions", d: "Use headlights and increase following distance heavily in rain or dark." },
+        { t: "Watch for people", d: "Expect pedestrians at crosswalks; remember they face 13x higher risk." },
+        { t: "Ease off on arterials", d: "Strictly obey speed limits on 35–45 mph roads—the highest risk zones." }
+      ];
+
+      var advCols = 2;
+      var advCardW = (mainW - gap) / advCols;
+      var advCardH = 75;
+
+      for (var j = 0; j < advice.length; j++) {
+        var acol = j % advCols;
+        var arow = Math.floor(j / advCols);
+        var ax = startX + acol * (advCardW + gap);
+        var ay = y + arow * (advCardH + gap);
+
+        p.fill(255);
+        p.stroke(225);
+        p.rect(ax, ay, advCardW, advCardH, 8);
+
+        // Warning/Alert Icon Proxy (Orange Triangle)
+        p.noStroke();
+        p.fill(251, 140, 0); 
+        p.triangle(ax + 24, ay + 20, ax + 19, ay + 29, ax + 29, ay + 29);
+
+        p.fill(18);
+        p.textSize(13);
+        p.textStyle(p.BOLD);
+        p.text(advice[j].t, ax + 38, ay + 17);
+        p.textStyle(p.NORMAL);
+
+        p.fill(80);
+        p.textSize(12);
+        p.textLeading(16);
+        p.text(advice[j].d, ax + 38, ay + 36, advCardW - 50, advCardH - 45);
+      }
+
       p.pop();
     }
   };
