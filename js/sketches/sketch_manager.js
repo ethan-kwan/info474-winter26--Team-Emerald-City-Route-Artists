@@ -1,3 +1,4 @@
+// Sketch Manager.js
 function startP5() {
   var localRenderer;
   localRenderer = window.Renderer;

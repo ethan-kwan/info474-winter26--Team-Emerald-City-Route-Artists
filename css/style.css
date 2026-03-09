@@ -68,6 +68,8 @@ body {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  position: relative;
+  z-index: 2;
 }
 
 .sidebar-scroll {
@@ -92,9 +94,20 @@ body {
 
 #sections {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   margin-top: -100vh;
   pointer-events: none;
+}
+
+/* Only when a viz is open, move the step layer behind the vis
+   so sidebar controls stay clickable */
+body.viz-open-stop1 #sections,
+body.viz-open-stop2 #sections,
+body.viz-open-stop3 #sections,
+body.viz-open-stop4 #sections,
+body.viz-open-stop5 #sections,
+body.viz-open-stop6 #sections {
+  z-index: 0;
 }
 
 .step {
@@ -124,16 +137,27 @@ body {
   transform: translateY(0);
 }
 
-/* Default step text aligned to the right so it stays off the viz */
+/* Default step content aligned to sit inside the right white panel */
 .step > * {
-  width: min(360px, 100%);
+  width: 268px;
+  max-width: 268px;
   margin-left: auto;
-  margin-right: 0;
-  text-align: left;
+  margin-right: 14px;
   margin-bottom: 10px;
+  text-align: left;
   background: none;
   border: none;
   box-shadow: none;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* Only the actual text/button parts should ever be interactive */
+.title,
+.step-body,
+.viz-cta,
+.viz-toggle {
+  pointer-events: auto;
 }
 
 /* Hero section should stay centered and wider */
@@ -143,6 +167,7 @@ body {
 
 .step[data-active-index="0"] > * {
   width: min(980px, 100%);
+  max-width: 980px;
   margin-left: auto;
   margin-right: auto;
   text-align: center;
@@ -186,7 +211,7 @@ body {
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.01em;
-  text-shadow: 0 2px 10px rgba(255,255,255,0.9);
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.9);
 }
 
 .end-spacer {
@@ -197,12 +222,13 @@ body {
    BUTTONS
    ========================================= */
 
-   .viz-cta {
+.viz-cta {
   margin-top: 8px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: min(360px, 100%);
+  width: 268px;
+  max-width: 268px;
   pointer-events: auto;
 }
 
@@ -216,9 +242,10 @@ body {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
   margin: 0;
-  width: fit-content;
+  width: 100%;
+  max-width: 268px;
   pointer-events: auto;
 }
 
@@ -235,6 +262,37 @@ body {
 .viz-note {
   font-size: 0.85rem;
   color: #6b7280;
+}
+
+/* When a viz is open, hide the route-layer CTA so it does not sit over sidebar */
+body.viz-open-stop1 .step.is-active .viz-cta,
+body.viz-open-stop2 .step.is-active .viz-cta,
+body.viz-open-stop3 .step.is-active .viz-cta,
+body.viz-open-stop4 .step.is-active .viz-cta,
+body.viz-open-stop5 .step.is-active .viz-cta,
+body.viz-open-stop6 .step.is-active .viz-cta {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Keep stop title/body faintly visible when open */
+body.viz-open-stop1 .step.is-active .step-body,
+body.viz-open-stop2 .step.is-active .step-body,
+body.viz-open-stop3 .step.is-active .step-body,
+body.viz-open-stop4 .step.is-active .step-body,
+body.viz-open-stop5 .step.is-active .step-body,
+body.viz-open-stop6 .step.is-active .step-body {
+  opacity: 0.15;
+  transition: opacity 0.3s ease;
+}
+
+body.viz-open-stop1 .step.is-active:hover .step-body,
+body.viz-open-stop2 .step.is-active:hover .step-body,
+body.viz-open-stop3 .step.is-active:hover .step-body,
+body.viz-open-stop4 .step.is-active:hover .step-body,
+body.viz-open-stop5 .step.is-active:hover .step-body,
+body.viz-open-stop6 .step.is-active:hover .step-body {
+  opacity: 1;
 }
 
 /* =========================================
@@ -264,18 +322,21 @@ body {
 }
 
 .viz-control select {
-  padding: 8px 10px;
-  border-radius: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
   border: 1px solid #e5e7eb;
   background: #f9fafb;
   font-size: 12px;
   color: #111827;
   font-weight: 600;
   outline: none;
+  box-sizing: border-box;
 }
 
 .viz-control select:focus {
   border-color: #0070f3;
+  box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.12);
 }
 
 /* Show only the active stop's filters */
@@ -301,29 +362,6 @@ body.viz-open-stop5 #viz-controls-stop5 {
 
 body.viz-open-stop6 #viz-controls-stop6 {
   display: grid;
-}
-
-/* =========================================
-   VIS OPEN TEXT FADE
-   ========================================= */
-
-body.viz-open-stop1 .step.is-active .step-body,
-body.viz-open-stop2 .step.is-active .step-body,
-body.viz-open-stop3 .step.is-active .step-body,
-body.viz-open-stop4 .step.is-active .step-body,
-body.viz-open-stop5 .step.is-active .step-body,
-body.viz-open-stop6 .step.is-active .step-body {
-  opacity: 0.15;
-  transition: opacity 0.3s ease;
-}
-
-body.viz-open-stop1 .step.is-active:hover .step-body,
-body.viz-open-stop2 .step.is-active:hover .step-body,
-body.viz-open-stop3 .step.is-active:hover .step-body,
-body.viz-open-stop4 .step.is-active:hover .step-body,
-body.viz-open-stop5 .step.is-active:hover .step-body,
-body.viz-open-stop6 .step.is-active:hover .step-body {
-  opacity: 1;
 }
 
 /* =========================================
@@ -377,6 +415,18 @@ body.viz-open-stop4 #vis {
   .step {
     padding: 110px 24px 50px 24px;
   }
+
+  .step > * {
+    width: 288px;
+    max-width: 288px;
+    margin-right: 16px;
+  }
+
+  .viz-cta,
+  .viz-toggle {
+    width: 100%;
+    max-width: 288px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -408,61 +458,21 @@ body.viz-open-stop4 #vis {
 
   .step > * {
     width: min(700px, 100%);
+    max-width: min(700px, 100%);
     margin-left: auto;
     margin-right: auto;
     text-align: center;
   }
 
   .viz-cta {
+    width: min(700px, 100%);
+    max-width: min(700px, 100%);
     align-items: center;
   }
 
   .viz-toggle {
+    width: fit-content;
+    max-width: 100%;
     margin: 0 auto;
   }
-}
-
-#sections {
-  position: relative;
-  z-index: 2;
-  margin-top: -100vh;
-  pointer-events: none;
-}
-
-.step {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-end;
-  padding: 34px 28px 60px 28px;
-  box-sizing: border-box;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 400ms ease, transform 400ms ease;
-  transform: translateY(20px);
-}
-
-.step.is-active {
-  opacity: 1;
-  pointer-events: none;
-  transform: translateY(0);
-}
-
-.step:first-child {
-  opacity: 1;
-  pointer-events: none;
-  transform: translateY(0);
-}
-
-.step > * {
-  pointer-events: none;
-}
-
-.title,
-.step-body,
-.viz-cta,
-.viz-toggle {
-  pointer-events: auto;
 }

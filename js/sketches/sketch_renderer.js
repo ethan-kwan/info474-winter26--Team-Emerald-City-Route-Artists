@@ -1,3 +1,4 @@
+// Sketch renderer.js
 (function () {
   function drawPlaceholder(p, manager, stopNum) {
     p.background(248, 249, 252);
