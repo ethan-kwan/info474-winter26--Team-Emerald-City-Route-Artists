@@ -1,3 +1,6 @@
+/* =========================================
+   js/helpers/sections.js
+   ========================================= */
 (function () {
   function displayData() {
     var defaults = {
@@ -12,41 +15,12 @@
 
     var cfg = Object.assign({}, defaults, window.ScrollDemoConfig || {});
 
-    // UI state for "open visualization"
     window.__vizUI = { open: false, stop: null };
     window.__activeStop = 0;
 
-    // ----------------------------
-    // Stop 1 filter state
-    // ----------------------------
-    window.__vizFilters = {
-      year: 'all',
-      severity: 'all',
-      mode: 'all',
-      time: 'all',
-      pinResetToken: 0
-    };
-
-    // ----------------------------
-    // ✅ Stop 2 filter state (drivers)
-    // ----------------------------
-    window.__driverFilters = {
-      factor: 'weather',
-      year: 'all',
-      mode: 'all',
-      time: 'all',
-      scope: 'all' // all | severe
-    };
-
-    // ----------------------------
-    // Stop 3 filter state
-    // ----------------------------
-    window.__affectFilters = {
-      year: 'all',
-      time: 'all',
-      metric: 'percent',
-      pinResetToken: 0
-    };
+    window.__vizFilters = { year: 'all', severity: 'all', mode: 'all', time: 'all', pinResetToken: 0 };
+    window.__driverFilters = { factor: 'weather', year: 'all', mode: 'all', time: 'all', scope: 'all' };
+    window.__affectFilters = { year: 'all', time: 'all', metric: 'percent', pinResetToken: 0 };
 
     function updateToggleButtons() {
       var btns = document.querySelectorAll('[data-viz-toggle]');
@@ -71,7 +45,6 @@
       }
     }
 
-    // ✅ Stop 2 → sketch state
     function pushStop2FiltersToSketch() {
       if (window.__sketchAPI && window.__sketchAPI.setState) {
         window.__sketchAPI.setState({
@@ -97,7 +70,7 @@
 
     function pushAllFiltersToSketch() {
       pushStop1FiltersToSketch();
-      pushStop2FiltersToSketch(); // ✅ NEW
+      pushStop2FiltersToSketch();
       pushStop3FiltersToSketch();
     }
 
@@ -105,7 +78,6 @@
       window.__vizUI.open = !!open;
       window.__vizUI.stop = open ? stop : null;
 
-      // body classes (controls visibility)
       document.body.classList.toggle('viz-open-stop1', window.__vizUI.open && window.__vizUI.stop === 1);
       document.body.classList.toggle('viz-open-stop2', window.__vizUI.open && window.__vizUI.stop === 2);
       document.body.classList.toggle('viz-open-stop3', window.__vizUI.open && window.__vizUI.stop === 3);
@@ -124,93 +96,23 @@
       pushAllFiltersToSketch();
     }
 
-    // ----------------------------
-    // Stop 1 controls
-    // ----------------------------
-    function readStop1Controls() {
-      var yearEl = document.getElementById('filter-year');
-      var sevEl = document.getElementById('filter-severity');
-      var modeEl = document.getElementById('filter-mode');
-      var timeEl = document.getElementById('filter-time');
-
-      if (yearEl) window.__vizFilters.year = yearEl.value || 'all';
-      if (sevEl) window.__vizFilters.severity = sevEl.value || 'all';
-      if (modeEl) window.__vizFilters.mode = modeEl.value || 'all';
-      if (timeEl) window.__vizFilters.time = timeEl.value || 'all';
-    }
-
-    function wireStop1Controls() {
-      var container = document.getElementById('viz-controls-stop1');
+    function wireControls(id, stateObj, pushFn) {
+      var container = document.getElementById(id);
       if (!container) return;
-
-      container.addEventListener('change', function () {
-        readStop1Controls();
-        window.__vizFilters.pinResetToken += 1; // clear pinned tooltip
-        pushStop1FiltersToSketch();
+      container.addEventListener('change', function(e) {
+          if (e.target.id) {
+              var key = e.target.id.split('-')[1];
+              stateObj[key] = e.target.value;
+          }
+          if(stateObj.pinResetToken !== undefined) stateObj.pinResetToken += 1;
+          pushFn();
       });
-
-      readStop1Controls();
-      pushStop1FiltersToSketch();
     }
 
-    // ----------------------------
-    // ✅ Stop 2 controls
-    // ----------------------------
-    function readStop2Controls() {
-      var yearEl = document.getElementById('driver-year');
-      var modeEl = document.getElementById('driver-mode');
-      var timeEl = document.getElementById('driver-time');
-      var scopeEl = document.getElementById('driver-scope');
-      var factorEl = document.getElementById('driver-factor');
-    
-      if (factorEl) window.__driverFilters.factor = factorEl.value || 'weather';
-      if (yearEl) window.__driverFilters.year = yearEl.value || 'all';
-      if (modeEl) window.__driverFilters.mode = modeEl.value || 'all';
-      if (timeEl) window.__driverFilters.time = timeEl.value || 'all';
-      if (scopeEl) window.__driverFilters.scope = scopeEl.value || 'all';
-    }
+    wireControls('viz-controls-stop1', window.__vizFilters, pushStop1FiltersToSketch);
+    wireControls('viz-controls-stop2', window.__driverFilters, pushStop2FiltersToSketch);
+    wireControls('viz-controls-stop3', window.__affectFilters, pushStop3FiltersToSketch);
 
-    function wireStop2Controls() {
-      var container = document.getElementById('viz-controls-stop2');
-      if (!container) return;
-
-      container.addEventListener('change', function () {
-        readStop2Controls();
-        pushStop2FiltersToSketch();
-      });
-
-      readStop2Controls();
-      pushStop2FiltersToSketch();
-    }
-
-    // ----------------------------
-    // Stop 3 controls
-    // ----------------------------
-    function readStop3Controls() {
-      var yearEl = document.getElementById('affect-year');
-      var timeEl = document.getElementById('affect-time');
-      var metricEl = document.getElementById('affect-metric');
-
-      if (yearEl) window.__affectFilters.year = yearEl.value || 'all';
-      if (timeEl) window.__affectFilters.time = timeEl.value || 'all';
-      if (metricEl) window.__affectFilters.metric = metricEl.value || 'percent';
-    }
-
-    function wireStop3Controls() {
-      var container = document.getElementById('viz-controls-stop3');
-      if (!container) return;
-
-      container.addEventListener('change', function () {
-        readStop3Controls();
-        window.__affectFilters.pinResetToken += 1; // clear pinned tooltip
-        pushStop3FiltersToSketch();
-      });
-
-      readStop3Controls();
-      pushStop3FiltersToSketch();
-    }
-
-    // Hide canvas until showAt
     try {
       var visStartEl = document.querySelector(cfg.visSelector);
       if (visStartEl && (cfg.showAt || 0) > 0) {
@@ -218,18 +120,14 @@
       }
     } catch (e) { }
 
-    // Open/close viz buttons (delegated)
     document.addEventListener('click', function (e) {
       var btn = e.target && e.target.closest ? e.target.closest('[data-viz-toggle]') : null;
       if (!btn) return;
-
       e.preventDefault();
       var stop = parseInt(btn.getAttribute('data-viz-toggle'), 10);
       if (isNaN(stop)) return;
-
       var isOpen = window.__vizUI.open && window.__vizUI.stop === stop;
-      if (isOpen) setVizOpen(false, null);
-      else setVizOpen(true, stop);
+      setVizOpen(!isOpen, isOpen ? null : stop);
     });
 
     (function callStartP5WithRetry(attempts) {
@@ -238,59 +136,39 @@
       if (typeof startP5 === 'function') {
         try {
           var api = startP5();
-
           if (api && api.ready && typeof api.ready.then === 'function') {
             api.ready.then(function () {
               try { if (api && api.setState) window.__sketchAPI = api; } catch (e) { }
-              wireStop1Controls();
-              wireStop2Controls(); // ✅ NEW
-              wireStop3Controls();
               updateToggleButtons();
               pushAllFiltersToSketch();
-            }).catch(function () {
-              if (api && api.setState) window.__sketchAPI = api;
-            });
+            }).catch(function () {});
           } else {
             if (api && api.setState) window.__sketchAPI = api;
-            wireStop1Controls();
-            wireStop2Controls(); // ✅ NEW
-            wireStop3Controls();
-            updateToggleButtons();
-            pushAllFiltersToSketch();
           }
 
           var ScrollerCtor = window.Scroller;
           if (!ScrollerCtor) return;
 
           var sc = new ScrollerCtor(cfg.containerSelector, cfg.stepSelector, cfg.trigger);
-
           var VisualControllerCtor = window.VisualController;
-          var visualController = null;
-          if (VisualControllerCtor) {
-            visualController = new VisualControllerCtor({ visSelector: cfg.visSelector, showAt: cfg.showAt });
-          }
+          var visualController = VisualControllerCtor ? new VisualControllerCtor({ visSelector: cfg.visSelector, showAt: cfg.showAt }) : null;
 
           sc.on('active', function (index) {
-            // only show active step
             var stepEls = document.querySelectorAll(cfg.stepSelector);
             stepEls.forEach(function (el, i) {
               if (i === index) el.classList.add('is-active');
               else el.classList.remove('is-active');
             });
 
-            // map active index
             var mappedIndex = index;
             try {
-              var stepEl = (sc.steps && sc.steps[index]) ? sc.steps[index] : stepEls[index];
+              var stepEl = stepEls[index];
               if (stepEl && stepEl.dataset && stepEl.dataset.activeIndex !== undefined) {
-                var parsed = parseInt(stepEl.dataset.activeIndex, 10);
-                if (!isNaN(parsed)) mappedIndex = parsed;
+                mappedIndex = parseInt(stepEl.dataset.activeIndex, 10);
               }
             } catch (e) { }
 
             window.__activeStop = mappedIndex;
-
-            // entering a new stop defaults back to route
             setVizOpen(false, null);
 
             if (window.__sketchAPI && window.__sketchAPI.setState) {
@@ -304,12 +182,23 @@
             var mappedIndex = index;
             try {
               var stepEls = document.querySelectorAll(cfg.stepSelector);
-              var stepEl = (sc.steps && sc.steps[index]) ? sc.steps[index] : stepEls[index];
+              var stepEl = stepEls[index];
               if (stepEl && stepEl.dataset && stepEl.dataset.activeIndex !== undefined) {
-                var parsed = parseInt(stepEl.dataset.activeIndex, 10);
-                if (!isNaN(parsed)) mappedIndex = parsed;
+                mappedIndex = parseInt(stepEl.dataset.activeIndex, 10);
               }
             } catch (e) { }
+
+            // Seatbelt HTML Animation logic during step 0
+            if (mappedIndex === 0) {
+              var pBelt = Math.min(1, Math.max(0, progress * 2.5)); 
+              var leftEl = document.getElementById('belt-left');
+              var rightEl = document.getElementById('belt-right');
+              var txtEl = document.getElementById('buckle-text');
+              
+              if (leftEl) leftEl.style.transform = 'translateX(' + (pBelt * 125) + 'px)';
+              if (rightEl) rightEl.style.transform = 'translateX(' + (-pBelt * 125) + 'px)';
+              if (txtEl) txtEl.style.opacity = pBelt > 0.95 ? 1 : 0;
+            }
 
             if (window.__sketchAPI && window.__sketchAPI.setState) {
               window.__sketchAPI.setState({ progress: progress, activeIndex: mappedIndex });

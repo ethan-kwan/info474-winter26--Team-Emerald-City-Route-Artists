@@ -1,4 +1,6 @@
-// visual_controller.js
+/* =========================================
+   js/helpers/visual_controller.js
+   ========================================= */
 (function () {
   function VisualController(opts) {
     opts = opts || {};

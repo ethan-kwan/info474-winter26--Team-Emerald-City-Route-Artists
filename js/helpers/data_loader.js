@@ -1,4 +1,6 @@
-// data_loader.js
+/* =========================================
+   js/helpers/data_loader.js
+   ========================================= */
 (function () {
   function splitCSVLine(line) {
     var res = [];
@@ -68,7 +70,6 @@
     });
   }
 
-  // ✅ IMPORTANT: do NOT use fallback||0 (NaN would turn into 0)
   function toInt(v, fallback) {
     var n = parseInt(v, 10);
     return isNaN(n) ? fallback : n;
@@ -84,14 +85,12 @@
     return (s === 'y' || s === 'yes' || s === '1' || s === 'true' || s === 't');
   }
 
-  // ✅ Extract a real year from "1/1/2025" or any string containing 4 digits
   function extractYear(v) {
     var s = (v === null || v === undefined) ? '' : String(v);
     var m = s.match(/(\d{4})/);
     return m ? parseInt(m[1], 10) : null;
   }
 
-  // Parse "M/D/YYYY H:MM:SS AM" (or "M/D/YYYY 12:00:00 AM") → day-of-week (0=Sun..6=Sat)
   function parseDowFromUSDateTime(v) {
     var s = (v === null || v === undefined) ? '' : String(v).trim();
     if (!s) return null;
@@ -120,7 +119,6 @@
     loadCSVPick: loadCSVPick
   };
 
-  // Collisions normalize for Stop 1
   window.DataLoader.preprocessCollisions = function (rows) {
     rows = rows || [];
     var out = [];
@@ -132,7 +130,7 @@
       var y = toFloat(r.y, NaN);
       if (isNaN(x) || isNaN(y)) continue;
 
-      var yr = extractYear(r.Year); // <-- FIXED
+      var yr = extractYear(r.Year); 
       var hr = toInt(r.Hour, null);
       var dow = parseDowFromUSDateTime(r.INCDTTM);
 
