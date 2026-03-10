@@ -620,15 +620,27 @@
 
         var center = this._cellCenterBase(agg, L.map, c.ix, c.iy);
 
-        var rOuter = (baseR * 3.8) / view.scale;
-        var rInner = (baseR * 1.6) / view.scale;
+        // 1. Better scaling: a power scale often provides better visual contrast than log
+        var tVis = Math.pow(c.count / maxCount, 0.5); 
+        tVis = clamp(tVis, 0, 1);
 
-        var a1 = 10 + Math.floor(70 * t);
-        p.fill(0, 140, 255, a1);
+        // 2. Reduce the overlapping radii
+        var rOuter = (baseR * 2.0) / view.scale; 
+        var rInner = (baseR * 1.0) / view.scale; 
+
+        // 3. Multi-hue color scale (Blue -> Red) for better density reading
+        var r = Math.floor(0 + (255 * tVis));
+        var g = Math.floor(140 * (1 - tVis) + 50 * tVis);
+        var b = Math.floor(255 * (1 - tVis));
+
+        // 4. Sharper alpha drop-off so low-density areas fade into the background
+        var aOuter = Math.floor(2 + 150 * tVis); // Lower base opacity
+        var aInner = Math.floor(10 + 220 * tVis);
+
+        p.fill(r, g, b, aOuter);
         p.ellipse(center.x, center.y, rOuter, rOuter);
 
-        var a2 = 28 + Math.floor(170 * t);
-        p.fill(0, 90, 200, a2);
+        p.fill(r, g, b, aInner);
         p.ellipse(center.x, center.y, rInner, rInner);
       }
       p.pop();
