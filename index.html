@@ -12,22 +12,32 @@
 
 <div id="graphic">
 
-  <!-- =========================================
-       VIS AREA
-  ========================================= -->
-
   <div id="vis" class="vis-hidden">
 
-    <!-- p5.js canvas mounts here -->
     <div id="vis-canvas"></div>
 
-    <!-- RIGHT SIDEBAR -->
     <div id="vis-sidebar">
 
       <div class="sidebar-scroll">
 
-        <!-- Stop 1 Filters -->
         <div class="viz-controls" id="viz-controls-stop1">
+          
+          <div class="viz-control">
+            <label for="search-street">Search Street</label>
+            <input 
+              type="text" 
+              id="search-street" 
+              placeholder="e.g. Rainier or Aurora" 
+              style="width: 100%; padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-size: 13px;" 
+              oninput="if(window.__sketchAPI) { 
+                        window.__sketchAPI.setState({ searchStreet: this.value }); 
+                        if(window.__sketchAPI.p5) { 
+                          window.__sketchAPI.p5.loop(); 
+                          window.__sketchAPI.p5.redraw(); 
+                        } 
+                      }" 
+            />
+          </div>
 
           <div class="viz-control">
             <label for="filter-year">Year</label>
@@ -75,7 +85,6 @@
         </div>
 
 
-        <!-- Stop 2 Controls -->
         <div class="viz-controls" id="viz-controls-stop2">
 
           <div class="viz-control">
@@ -130,7 +139,6 @@
         </div>
 
 
-        <!-- Stop 3 Controls -->
         <div class="viz-controls" id="viz-controls-stop3">
 
           <div class="viz-control">
@@ -171,10 +179,6 @@
     </div>
   </div>
 
-
-  <!-- =========================================
-       SCROLL SECTIONS
-  ========================================= -->
 
   <div id="sections">
 
@@ -275,8 +279,6 @@
 
 </div>
 
-
-<!-- p5 -->
 <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
 
 <script src="js/helpers/data_loader.js"></script>
@@ -304,6 +306,18 @@ window.ScrollDemoConfig = {
 <script src="js/sketches/viz/viz_conclusion.js"></script>
 
 <script src="js/sketches/sketch_renderer.js"></script>
+
+<script>
+  document.getElementById('search-street').addEventListener('input', function(e) {
+    // Bypass the strict state manager by using the window object
+    window.__searchStreetQuery = e.target.value;
+    
+    // Force the p5 canvas to wake up and redraw the rings
+    if (window.__sketchAPI && window.__sketchAPI.p5) {
+      window.__sketchAPI.p5.redraw();
+    }
+  });
+</script>
 
 </body>
 </html>

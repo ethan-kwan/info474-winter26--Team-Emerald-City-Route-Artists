@@ -615,12 +615,10 @@
       p.noStroke();
       for (var ci = 0; ci < agg.cells.length; ci++) {
         var c = agg.cells[ci];
-        var t = Math.log(1 + c.count) / Math.log(1 + maxCount);
-        t = clamp(t, 0, 1);
 
         var center = this._cellCenterBase(agg, L.map, c.ix, c.iy);
 
-        // 1. Better scaling: a power scale often provides better visual contrast than log
+        // 1. Better scaling: a power scale provides better visual contrast
         var tVis = Math.pow(c.count / maxCount, 0.5); 
         tVis = clamp(tVis, 0, 1);
 
@@ -642,6 +640,28 @@
 
         p.fill(r, g, b, aInner);
         p.ellipse(center.x, center.y, rInner, rInner);
+
+        // --- 5. STREET SEARCH HIGHLIGHT ---
+        // Now checks the global window variable if the manager drops the state
+        var query = (manager.state.searchStreet || window.__searchStreetQuery || '').trim().toLowerCase();
+        
+        if (query.length > 2) {
+          var isMatch = false;
+          for (var s = 0; s < c.topStreets.length; s++) {
+            if (c.topStreets[s].key.toLowerCase().indexOf(query) >= 0) {
+              isMatch = true;
+              break;
+            }
+          }
+          
+          if (isMatch) {
+            p.stroke(255, 204, 0, 240); 
+            p.strokeWeight(2 / view.scale); 
+            p.noFill();
+            p.ellipse(center.x, center.y, rOuter + 6, rOuter + 6);
+            p.noStroke(); 
+          }
+        }
       }
       p.pop();
 
@@ -653,10 +673,17 @@
       var legW = Math.min(240, L.map.w * 0.4);
       var legH = 9;
 
+      // Draw Legend Gradient
       for (var px = 0; px < legW; px++) {
         var tt = px / Math.max(1, legW - 1);
-        var alpha = 30 + Math.floor(180 * tt);
-        p.stroke(0, 90, 200, alpha);
+        var legVis = Math.pow(tt, 0.5);
+        
+        var lr = Math.floor(0 + (255 * legVis));
+        var lg = Math.floor(140 * (1 - legVis) + 50 * legVis);
+        var lb = Math.floor(255 * (1 - legVis));
+        var lAlpha = Math.floor(30 + 180 * legVis);
+
+        p.stroke(lr, lg, lb, lAlpha);
         p.line(legX + px, legY, legX + px, legY + legH);
       }
 
@@ -669,7 +696,7 @@
       p.text("High", legX + legW, legY - 2);
       p.pop();
 
-            if (L.side) {
+      if (L.side) {
         var s = agg.summary || {};
         var yearSeries = this._yearSeries(manager);
 
