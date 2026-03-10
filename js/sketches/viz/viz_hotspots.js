@@ -324,6 +324,69 @@
       return agg;
     },
 
+    _yearSeries: function (manager) {
+      manager.data.hotspotYearSeriesCache = manager.data.hotspotYearSeriesCache || {};
+
+      var key = [
+        manager.state.filterSeverity || 'all',
+        manager.state.filterMode || 'all',
+        manager.state.filterTime || 'all'
+      ].join('|');
+
+      if (manager.data.hotspotYearSeriesCache[key]) {
+        return manager.data.hotspotYearSeriesCache[key];
+      }
+
+      var all = manager.data.collisionsAll || [];
+      var sevFilter = manager.state.filterSeverity || 'all';
+      var modeFilter = manager.state.filterMode || 'all';
+      var timeFilter = manager.state.filterTime || 'all';
+
+      var years = [2022, 2023, 2024, 2025, 2026];
+      var counts = {
+        2022: 0,
+        2023: 0,
+        2024: 0,
+        2025: 0,
+        2026: 0
+      };
+
+      for (var i = 0; i < all.length; i++) {
+        var d = all[i];
+        var y = Number(d.year);
+
+        if (years.indexOf(y) < 0) continue;
+        if (!severityMatch(d.severity, sevFilter)) continue;
+        if (!modeMatch(d, modeFilter)) continue;
+        if (!timeMatch(d.hour, timeFilter)) continue;
+
+        counts[y] += 1;
+      }
+
+      var maxVal = 1;
+      var series = [];
+
+      for (var j = 0; j < years.length; j++) {
+        var yr = years[j];
+        var val = counts[yr] || 0;
+        if (val > maxVal) maxVal = val;
+
+        series.push({
+          year: yr,
+          value: val
+        });
+      }
+
+      var out = {
+        years: years,
+        series: series,
+        maxVal: maxVal
+      };
+
+      manager.data.hotspotYearSeriesCache[key] = out;
+      return out;
+    },
+
     _percentileLabel: function (countsSorted, count) {
       if (!countsSorted || !countsSorted.length) return "";
       var n = countsSorted.length;
@@ -594,11 +657,21 @@
       p.text("High", legX + legW, legY - 2);
       p.pop();
 
-      if (L.side) {
+            if (L.side) {
         var s = agg.summary || {};
+        var yearSeries = this._yearSeries(manager);
 
-        var btnReset = { x: L.side.left + 16, y: L.side.top + 16, w: L.side.w - 32, h: 30 };
-        var btnMinus = { x: L.side.left + 16, y: btnReset.y + btnReset.h + 10, w: (L.side.w - 40) / 2, h: 30 };
+        var cardX = L.side.left + 12;
+        var cardY = L.side.top + 12;
+        var cardW = L.side.w - 24;
+        var cardH = L.side.h - 24;
+
+        var innerPad = 16;
+        var contentX = cardX + innerPad;
+        var contentW = cardW - innerPad * 2;
+
+        var btnReset = { x: contentX, y: cardY + 10, w: contentW, h: 30 };
+        var btnMinus = { x: contentX, y: btnReset.y + btnReset.h + 12, w: (contentW - 8) / 2, h: 30 };
         var btnPlus = { x: btnMinus.x + btnMinus.w + 8, y: btnMinus.y, w: btnMinus.w, h: 30 };
 
         function inRect(mx, my, r) {
@@ -630,7 +703,7 @@
         p.push();
         p.noStroke();
         p.fill(255, 255, 255, 238);
-        p.rect(L.side.left + 10, L.side.top + 10, L.side.w - 20, L.side.h - 20, 14);
+        p.rect(cardX, cardY, cardW, cardH, 14);
 
         p.fill(hoverReset ? 0 : 18, hoverReset ? 120 : 140, 255, hoverReset ? 230 : 215);
         p.rect(btnReset.x, btnReset.y, btnReset.w, btnReset.h, 11);
@@ -653,40 +726,136 @@
         p.fill(90);
         p.textSize(10);
         p.textAlign(p.LEFT, p.TOP);
-        p.text("Zoom: " + view.scale.toFixed(2) + "×", L.side.left + 20, btnPlus.y + btnPlus.h + 8);
+        p.text("Zoom: " + view.scale.toFixed(2) + "×", contentX, btnPlus.y + btnPlus.h + 10);
 
-        var y = btnPlus.y + btnPlus.h + 28;
+        var y = btnPlus.y + btnPlus.h + 34;
 
         p.fill(18);
         p.textSize(13);
-        p.text("Quick stats", L.side.left + 20, y);
-        y += 22;
+        p.text("Quick stats", contentX, y);
+        y += 24;
 
         p.fill(60);
         p.textSize(11);
-        p.text("Total crashes: " + (s.total || 0), L.side.left + 20, y);
-        y += 16;
-        p.text("Serious + Fatal: " + (s.severe || 0) + " (" + (s.severePct || 0) + "%)", L.side.left + 20, y);
-        y += 24;
+        p.text("Total crashes: " + (s.total || 0), contentX, y);
+        y += 18;
+        p.text("Serious + Fatal: " + (s.severe || 0) + " (" + (s.severePct || 0) + "%)", contentX, y);
+        y += 28;
 
         p.fill(18);
         p.textSize(12);
-        p.text("Top streets", L.side.left + 20, y);
-        y += 18;
+        p.text("Crash trend (2022–2026)", contentX, y - 10);
+        y += 12;
+
+        var chart = {
+          x: contentX,
+          y: y,
+          w: contentW,
+          h: 112
+        };
+
+        p.noFill();
+        p.stroke(225);
+        p.strokeWeight(1);
+        p.rect(chart.x, chart.y, chart.w, chart.h, 10);
+
+        var padL = 34;
+        var padR = 10;
+        var padT = 12;
+        var padB = 24;
+
+        var innerX = chart.x + padL;
+        var innerY = chart.y + padT;
+        var innerW = chart.w - padL - padR;
+        var innerH = chart.h - padT - padB;
+
+        p.stroke(210);
+        p.strokeWeight(1);
+
+        for (var g = 0; g < 4; g++) {
+          var gy = innerY + (innerH * g / 3);
+          p.line(innerX, gy, innerX + innerW, gy);
+        }
+
+        p.stroke(160);
+        p.line(innerX, innerY + innerH, innerX + innerW, innerY + innerH);
+
+        p.noStroke();
+        p.fill(110);
+        p.textSize(9);
+        p.textAlign(p.RIGHT, p.CENTER);
+
+        for (var gy2 = 0; gy2 < 4; gy2++) {
+          var frac = 1 - (gy2 / 3);
+          var valLabel = Math.round(yearSeries.maxVal * frac);
+          var yLabel = innerY + (innerH * gy2 / 3);
+          p.text(String(valLabel), innerX - 6, yLabel);
+        }
+
+        var pts = [];
+        for (var si = 0; si < yearSeries.series.length; si++) {
+          var item = yearSeries.series[si];
+          var px2 = innerX + (yearSeries.series.length === 1 ? innerW / 2 : (innerW * si / (yearSeries.series.length - 1)));
+          var py2 = innerY + innerH - ((item.value / Math.max(1, yearSeries.maxVal)) * innerH);
+          pts.push({ x: px2, y: py2, year: item.year, value: item.value });
+        }
+
+        p.noFill();
+        p.stroke(0, 90, 200, 220);
+        p.strokeWeight(2.5);
+        p.beginShape();
+        for (var pi = 0; pi < pts.length; pi++) {
+          p.vertex(pts[pi].x, pts[pi].y);
+        }
+        p.endShape();
+
+        p.noStroke();
+        p.fill(0, 90, 200, 220);
+        for (var pi2 = 0; pi2 < pts.length; pi2++) {
+          p.circle(pts[pi2].x, pts[pi2].y, 7);
+        }
+
+        p.fill(80);
+        p.textSize(9);
+        p.textAlign(p.CENTER, p.TOP);
+        for (var xi = 0; xi < pts.length; xi++) {
+          p.text(String(pts[xi].year), pts[xi].x, innerY + innerH + 6);
+        }
+
+        p.textSize(9);
+        p.textAlign(p.CENTER, p.BOTTOM);
+        for (var vi = 0; vi < pts.length; vi++) {
+          p.text(String(pts[vi].value), pts[vi].x, pts[vi].y - 6);
+        }
+
+        y = chart.y + chart.h + 34;
+
+        p.fill(18);
+        p.textSize(12);
+        p.text("Top streets", contentX + 20, y);
+        y += 20;
 
         p.fill(60);
         p.textSize(11);
+        p.textAlign(p.LEFT, p.TOP);
+
         var topStreets = s.topStreets || [];
-        for (var i = 0; i < Math.min(5, topStreets.length); i++) {
-          var it = topStreets[i];
-          p.text((i + 1) + ". " + shorten(it.key, 22) + " (" + it.count + ")", L.side.left + 20, y);
-          y += 16;
+        for (var i2 = 0; i2 < Math.min(5, topStreets.length); i2++) {
+          var it = topStreets[i2];
+          p.text((i2 + 1) + ". " + shorten(it.key, 18) + " (" + it.count + ")", contentX, y);
+          y += 15;
         }
 
         y += 10;
         p.fill(90);
         p.textSize(10);
-        p.text("Tip: zoom in to inspect corridors like Aurora Ave N.", L.side.left + 20, y);
+        p.text(
+          "Note: 2026 may look lower if the dataset only includes part of the year.",
+          contentX,
+          y,
+          contentW,
+          40
+        );
 
         p.pop();
       }
