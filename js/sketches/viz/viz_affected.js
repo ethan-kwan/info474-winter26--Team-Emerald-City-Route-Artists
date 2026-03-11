@@ -196,9 +196,7 @@
         var maxBarH = cardAreaH - 300; 
         var barW = 75;
         var bx = cx + (cardW / 2) - (barW / 2);
-        var metric = manager.state.affectMetric || "percent";
-        var totalHeight = (metric === "count") ? (g.total / Math.max(1, agg.maxTotal)) * maxBarH : maxBarH;
-        if (metric === "count" && totalHeight < 15 && g.total > 0) totalHeight = 15;
+        var totalHeight = maxBarH;
 
         var curY = barBottom;
         for (var bi = 0; bi < bucketOrder.length; bi++) {

@@ -20,7 +20,7 @@
 
     window.__vizFilters = { year: 'all', severity: 'all', mode: 'all', time: 'all', pinResetToken: 0 };
     window.__driverFilters = { factor: 'weather', year: 'all', mode: 'all', time: 'all', scope: 'all' };
-    window.__affectFilters = { year: 'all', time: 'all', metric: 'percent', pinResetToken: 0 };
+    window.__affectFilters = { year: 'all', time: 'all', pinResetToken: 0 };
     window.__timeFilters = { year: 'all', severity: 'all' };
 
     function updateToggleButtons() {
@@ -63,7 +63,7 @@
         window.__sketchAPI.setState({
           affectYear: window.__affectFilters.year,
           affectTime: window.__affectFilters.time,
-          affectMetric: window.__affectFilters.metric,
+          affectMetric: 'percent',
           affectPinResetToken: window.__affectFilters.pinResetToken
         });
       }

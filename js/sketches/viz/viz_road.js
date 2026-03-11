@@ -11,6 +11,11 @@
     return a + (b - a) * t;
   }
 
+  function smoothstep01(x) {
+    var t = clamp01(x);
+    return t * t * (3 - 2 * t);
+  }
+
   window.VizRoad = {
     init: function (manager) {
       if (manager._road) return;
@@ -28,6 +33,7 @@
 
       manager._roadEnv = { trees: [] };
       manager._roadAnchorCache = null;
+      manager._roadCarT = null;
 
       for (var i = 0; i < 65; i++) {
         var t = 0.04 + Math.random() * 0.90;
@@ -229,7 +235,7 @@
     },
 
     _drawBackground: function (p) {
-      p.background(238, 242, 246);
+      p.background(245, 241, 234);
     },
 
     _drawEnvironment: function (p, manager) {
@@ -676,23 +682,22 @@
 
       var stops = manager._road.stops;
       var activeStop = Math.max(1, Math.min(6, ai));
-      var idx = activeStop - 1;
-
       var rawP = clamp01(progress || 0);
+      var fromIdx = activeStop - 1;
+      var toIdx = Math.min(stops.length - 1, fromIdx + 1);
+      var targetT = lerp(stops[fromIdx].t, stops[toIdx].t, smoothstep01(rawP));
 
-      /*
-        Keep the car aligned with the current stop for most of the step,
-        then move near the end so it does not look disconnected from the
-        active stop / gas station.
-      */
-      var moveP = clamp01((rawP - 0.78) / 0.18);
+      if (typeof manager._roadCarT !== 'number') {
+        manager._roadCarT = targetT;
+      } else {
+        manager._roadCarT += (targetT - manager._roadCarT) * 0.24;
+      }
 
-      var tA = stops[idx].t;
-      var tB = (idx < stops.length - 1) ? stops[idx + 1].t : stops[idx].t;
-      var tCar = lerp(tA, tB, moveP);
+      var tCar = clamp01(manager._roadCarT);
 
       this._drawRoad(p, manager);
       this._drawHouse(p, manager);
+      this._drawCar(p, manager, tCar);
 
       var layout = this._buildLabelLayout(manager, activeStop);
 
@@ -709,8 +714,6 @@
           this._drawCompactStopPill(p, item);
         }
       }
-
-      this._drawCar(p, manager, tCar);
     }
   };
 })();
