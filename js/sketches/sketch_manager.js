@@ -31,7 +31,11 @@ function startP5() {
       affectYear: 'all',
       affectTime: 'all',
       affectMetric: 'percent',
-      affectPinResetToken: 0
+      affectPinResetToken: 0,
+
+      // Stop 4
+      timeYear: 'all',
+      timeSeverity: 'all'
     };
 
     this.data = {
@@ -116,6 +120,10 @@ function startP5() {
     if (s.affectTime !== undefined) this.state.affectTime = s.affectTime;
     if (s.affectMetric !== undefined) this.state.affectMetric = s.affectMetric;
     if (s.affectPinResetToken !== undefined) this.state.affectPinResetToken = s.affectPinResetToken;
+
+    // Stop 4
+    if (s.timeYear !== undefined) this.state.timeYear = s.timeYear;
+    if (s.timeSeverity !== undefined) this.state.timeSeverity = s.timeSeverity;
   };
 
   SketchManager.prototype.setData = function (newData) {

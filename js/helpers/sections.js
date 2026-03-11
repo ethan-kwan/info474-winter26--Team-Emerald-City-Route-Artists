@@ -21,6 +21,7 @@
     window.__vizFilters = { year: 'all', severity: 'all', mode: 'all', time: 'all', pinResetToken: 0 };
     window.__driverFilters = { factor: 'weather', year: 'all', mode: 'all', time: 'all', scope: 'all' };
     window.__affectFilters = { year: 'all', time: 'all', metric: 'percent', pinResetToken: 0 };
+    window.__timeFilters = { year: 'all', severity: 'all' };
 
     function updateToggleButtons() {
       var btns = document.querySelectorAll('[data-viz-toggle]');
@@ -68,10 +69,20 @@
       }
     }
 
+    function pushStop4FiltersToSketch() {
+      if (window.__sketchAPI && window.__sketchAPI.setState) {
+        window.__sketchAPI.setState({
+          timeYear: window.__timeFilters.year,
+          timeSeverity: window.__timeFilters.severity
+        });
+      }
+    }
+
     function pushAllFiltersToSketch() {
       pushStop1FiltersToSketch();
       pushStop2FiltersToSketch();
       pushStop3FiltersToSketch();
+      pushStop4FiltersToSketch();
     }
 
     function setVizOpen(open, stop) {
@@ -112,6 +123,7 @@
     wireControls('viz-controls-stop1', window.__vizFilters, pushStop1FiltersToSketch);
     wireControls('viz-controls-stop2', window.__driverFilters, pushStop2FiltersToSketch);
     wireControls('viz-controls-stop3', window.__affectFilters, pushStop3FiltersToSketch);
+    wireControls('viz-controls-stop4', window.__timeFilters, pushStop4FiltersToSketch);
 
     try {
       var visStartEl = document.querySelector(cfg.visSelector);
