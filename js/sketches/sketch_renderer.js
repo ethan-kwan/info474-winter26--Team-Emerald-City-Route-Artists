@@ -105,6 +105,13 @@
     },
 
     draw: function (p, manager, ai, progress) {
+      var visHost = document.getElementById("vis-canvas");
+      if (visHost) {
+        visHost.classList.remove("leaflet-hotspot-active");
+        var oldLeafletRoot = visHost.querySelector(".hotspot-leaflet-root");
+        if (oldLeafletRoot && oldLeafletRoot.parentNode) oldLeafletRoot.parentNode.removeChild(oldLeafletRoot);
+      }
+
       // Title screen
       if (ai === 0) {
         if (window.VizTitle && window.VizTitle.draw) window.VizTitle.draw(p, manager, ai, progress);

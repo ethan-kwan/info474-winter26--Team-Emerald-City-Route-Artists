@@ -180,9 +180,7 @@
         types: {}
       };
 
-      var samplePts = [];
-      var sampleTarget = 2200;
-      var seen = 0;
+      var drawPts = [];
 
       function getCell(ix, iy) {
         var k = ix + "|" + iy;
@@ -281,13 +279,12 @@
 
         if (cell.count > maxCount) maxCount = cell.count;
 
-        seen += 1;
-        if (samplePts.length < sampleTarget) {
-          samplePts.push({ x: d.x, y: d.y });
-        } else {
-          var r = Math.floor(Math.random() * seen);
-          if (r < sampleTarget) samplePts[r] = { x: d.x, y: d.y };
-        }
+        drawPts.push({
+          nx: nx,
+          ny: ny,
+          ix: ix,
+          iy: iy
+        });
       }
 
       var cells = [];
@@ -322,7 +319,7 @@
         maxCount: Math.max(1, maxCount),
         cells: cells,
         countsSorted: counts,
-        samplePts: samplePts,
+        drawPts: drawPts,
         _cellLookup: lookup,
         summary: summary
       };
@@ -627,39 +624,58 @@
       var maxCount = Math.max(1, agg.maxCount);
       p.push();
       p.noStroke();
-      for (var sp = 0; sp < agg.samplePts.length; sp++) {
-        var pt = agg.samplePts[sp];
-        var nx = (pt.x - agg.minX) / agg.dx;
-        var ny = (pt.y - agg.minY) / agg.dy;
-        nx = clamp(nx, 0, 0.999999);
-        ny = clamp(ny, 0, 0.999999);
+      // Keep a persistent cool baseline so low-density streets stay visible.
+      for (var sp = 0; sp < agg.drawPts.length; sp++) {
+        var pt = agg.drawPts[sp];
+        var x = pt.nx * L.map.w;
+        var y = (1 - pt.ny) * L.map.h;
+        var dotBase = 4.8 / view.scale;
+        p.fill(106, 173, 255, 132);
+        p.circle(x, y, dotBase);
+      }
 
-        var x = nx * L.map.w;
-        var y = (1 - ny) * L.map.h;
+      // Overlay warm highlights only on denser cells.
+      for (var sp2 = 0; sp2 < agg.drawPts.length; sp2++) {
+        var pt2 = agg.drawPts[sp2];
+        var x2 = pt2.nx * L.map.w;
+        var y2 = (1 - pt2.ny) * L.map.h;
 
-        var ix = Math.floor(nx * agg.cols);
-        var iy = Math.floor(ny * agg.rows);
-        var cell = agg._cellLookup[ix + "|" + iy];
+        var cell = agg._cellLookup[pt2.ix + "|" + pt2.iy];
         var localCount = cell ? cell.count : 1;
 
         var t = Math.log(1 + localCount) / Math.log(1 + maxCount);
         t = clamp(t, 0, 1);
+        var hot = clamp((t - 0.62) / 0.38, 0, 1);
+        if (hot <= 0) continue;
 
-        var lowR = 134, lowG = 188, lowB = 244;
-        var hiR = 242, hiG = 82, hiB = 36;
-        var rr = Math.round(lowR + (hiR - lowR) * t);
-        var gg = Math.round(lowG + (hiG - lowG) * t);
-        var bb = Math.round(lowB + (hiB - lowB) * t);
-
-        var dot = (6 + t * 3.4) / view.scale;
-        var alpha = 38 + Math.floor(155 * Math.pow(t, 1.25));
+        var rr = Math.round(246 + (235 - 246) * hot);
+        var gg = Math.round(133 + (79 - 133) * hot);
+        var bb = Math.round(102 + (47 - 102) * hot);
+        var alpha = 24 + Math.floor(110 * Math.pow(hot, 1.2));
+        var dot = (4.0 + hot * 2.9) / view.scale;
         p.fill(rr, gg, bb, alpha);
-        p.circle(x, y, dot);
+        p.circle(x2, y2, dot);
 
-        if (t > 0.6) {
-          p.fill(255, 102, 72, Math.floor(60 * t));
-          p.circle(x, y, dot * 1.8);
+        if (hot > 0.76) {
+          p.fill(255, 115, 85, Math.floor(58 * hot));
+          p.circle(x2, y2, dot * 1.75);
         }
+      }
+
+      // Highest local counts get a bright core.
+      for (var sp3 = 0; sp3 < agg.drawPts.length; sp3++) {
+        var pt3 = agg.drawPts[sp3];
+        var x3 = pt3.nx * L.map.w;
+        var y3 = (1 - pt3.ny) * L.map.h;
+        var cell = agg._cellLookup[pt3.ix + "|" + pt3.iy];
+        var localCount = cell ? cell.count : 1;
+
+        var t = Math.log(1 + localCount) / Math.log(1 + maxCount);
+        t = clamp(t, 0, 1);
+        var core = clamp((t - 0.84) / 0.16, 0, 1);
+        if (core <= 0) continue;
+        p.fill(255, 77, 57, 118);
+        p.circle(x3, y3, (3.2 + core * 1.8) / view.scale);
       }
       p.pop();
 
@@ -879,10 +895,12 @@
 
         y = chart.y + chart.h + 34;
 
+        var streetsX = contentX + 44;
+
         p.fill(18);
         p.textStyle(p.BOLD);
         p.textSize(16);
-        p.text("Top streets", contentX, y);
+        p.text("Top streets", streetsX, y);
         y += 24;
 
         p.fill(60);
@@ -893,7 +911,7 @@
         var topStreets = s.topStreets || [];
         for (var i2 = 0; i2 < Math.min(5, topStreets.length); i2++) {
           var it = topStreets[i2];
-          p.text((i2 + 1) + ". " + shorten(it.key, 20) + " (" + it.count + ")", contentX, y);
+          p.text((i2 + 1) + ". " + shorten(it.key, 20) + " (" + it.count + ")", streetsX, y);
           y += 17;
         }
 
@@ -902,9 +920,9 @@
         p.textSize(10);
         p.text(
           "Note: 2026 may look lower if the dataset only includes part of the year.",
-          contentX,
+          streetsX,
           y,
-          contentW,
+          contentW - 44,
           40
         );
 
