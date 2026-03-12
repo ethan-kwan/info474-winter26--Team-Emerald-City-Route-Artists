@@ -207,7 +207,11 @@ function startP5() {
 
       // Stop 4
       timeYear: 'all',
-      timeSeverity: 'all'
+      timeSeverity: 'all',
+
+      // Stop 5
+      streetContextYear: 'all',
+      streetContextSeverity: 'all'
     };
 
     this.data = {
@@ -298,6 +302,10 @@ function startP5() {
     // Stop 4
     if (s.timeYear !== undefined) this.state.timeYear = s.timeYear;
     if (s.timeSeverity !== undefined) this.state.timeSeverity = s.timeSeverity;
+
+    // Stop 5
+    if (s.streetContextYear !== undefined) this.state.streetContextYear = s.streetContextYear;
+    if (s.streetContextSeverity !== undefined) this.state.streetContextSeverity = s.streetContextSeverity;
   };
 
   SketchManager.prototype.setData = function (newData) {

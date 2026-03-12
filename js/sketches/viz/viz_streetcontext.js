@@ -14,10 +14,16 @@
     return 'PDO';
   }
 
+  function makeKey(state) {
+    state = state || {};
+    return (state.streetContextYear || 'all') + '|' + (state.streetContextSeverity || 'all');
+  }
+
   window.VizStreetContext = {
     _layout: function (p) {
       var pad = 18;
-      var topBannerH = 140;
+      // Slightly tighter header so the chart fits without clipping
+      var topBannerH = 92;
       var left = pad;
       var top = pad + topBannerH;
       var w = p.width - pad * 2;
@@ -26,10 +32,40 @@
     },
 
     _computeAgg: function (manager) {
+      if (!manager || !manager.data) return { ready: false, items: [], total: 0, matched: 0, pctMatched: 0, maxRatePer100: 0 };
       manager.data.streetContextCache = manager.data.streetContextCache || {};
-      if (manager.data.streetContextCache.ready) return manager.data.streetContextCache;
+      var key = makeKey(manager.state);
+      if (manager.data.streetContextCache[key]) return manager.data.streetContextCache[key];
 
       var collisions = manager.data.collisionsAll || [];
+      var state = manager.state || {};
+      var streetContextYear = state.streetContextYear || 'all';
+      var streetContextSeverity = state.streetContextSeverity || 'all';
+
+      // Filter by year
+      if (streetContextYear && streetContextYear !== 'all') {
+        var yearStr = String(streetContextYear);
+        var byYear = [];
+        for (var yi = 0; yi < collisions.length; yi++) {
+          if (String(collisions[yi].year) === yearStr) byYear.push(collisions[yi]);
+        }
+        collisions = byYear;
+      }
+
+      // Filter by severity (bucket label: Fatal, Serious, Injury, PDO)
+      if (streetContextSeverity && streetContextSeverity !== 'all') {
+        var sevLabel = streetContextSeverity.charAt(0).toUpperCase() + streetContextSeverity.slice(1).toLowerCase();
+        if (sevLabel === 'Pdo') sevLabel = 'PDO';
+        if (sevLabel === 'Serious') sevLabel = 'Serious';
+        if (sevLabel === 'Injury') sevLabel = 'Injury';
+        if (sevLabel === 'Fatal') sevLabel = 'Fatal';
+        var bySev = [];
+        for (var si = 0; si < collisions.length; si++) {
+          if (bucketFor(collisions[si]) === sevLabel) bySev.push(collisions[si]);
+        }
+        collisions = bySev;
+      }
+
       var lookup = manager.data.streetSpeedByDesc || {};
       var total = collisions.length;
       var matched = 0;
@@ -37,8 +73,8 @@
 
       for (var i = 0; i < collisions.length; i++) {
         var d = collisions[i];
-        var key = norm(d.location);
-        var speed = key ? lookup[key] : undefined;
+        var locKey = norm(d.location);
+        var speed = locKey ? lookup[locKey] : undefined;
         if (speed === undefined || speed === null) continue;
         matched++;
         var sp = Number(speed);
@@ -71,7 +107,7 @@
       }
 
       var pctMatched = total ? Math.round((matched / total) * 1000) / 10 : 0;
-      manager.data.streetContextCache = {
+      var result = {
         ready: true,
         total: total,
         matched: matched,
@@ -79,10 +115,22 @@
         items: items,
         maxRatePer100: maxRatePer100
       };
-      return manager.data.streetContextCache;
+      manager.data.streetContextCache[key] = result;
+      return result;
     },
 
     draw: function (p, manager) {
+      if (!p || !manager) return;
+      if (!manager.data) {
+        p.background(248, 249, 252);
+        p.fill(80);
+        p.textAlign(p.CENTER, p.CENTER);
+        p.textSize(14);
+        p.text("Loading…", p.width / 2, p.height / 2);
+        return;
+      }
+      if (!manager.state) manager.state = {};
+
       var L = this._layout(p);
       p.background(248, 249, 252);
 
@@ -101,6 +149,12 @@
         p.pop();
         return;
       }
+
+      // Sync filter state from DOM so chart reflects sidebar dropdowns
+      var yearEl = document.getElementById('street-year');
+      var severityEl = document.getElementById('street-severity');
+      if (yearEl && manager.state) manager.state.streetContextYear = yearEl.value || 'all';
+      if (severityEl && manager.state) manager.state.streetContextSeverity = severityEl.value || 'all';
 
       var agg = this._computeAgg(manager);
       if (!agg || !agg.ready) {
@@ -123,17 +177,32 @@
       p.textStyle(p.NORMAL);
       p.fill(110);
       p.textSize(12);
-      p.text("Collisions matched to Seattle street segments by location. Chart: crashes per 100 segments by speed limit, stacked by severity.", L.left, 48);
+      p.text(
+        "Collisions matched to Seattle street segments by location. Chart: crashes per 100 segments by speed limit, stacked by severity.",
+        L.left, 48
+      );
       p.fill(120);
       p.textSize(11);
-      p.text("Showing " + agg.matched.toLocaleString() + " of " + agg.total.toLocaleString() + " collisions (" + agg.pctMatched + "% matched).", L.left, 68);
+      var fYear = (manager.state && manager.state.streetContextYear !== 'all')
+        ? ('Year ' + manager.state.streetContextYear)
+        : 'All years';
+      var fSev = (manager.state && manager.state.streetContextSeverity !== 'all')
+        ? manager.state.streetContextSeverity
+        : 'All severities';
+      p.text(
+        "Filters: " + fYear + " · " + fSev +
+          " — showing " + (agg.matched || 0).toLocaleString() +
+          " of " + (agg.total || 0).toLocaleString() +
+          " collisions (" + (agg.pctMatched || 0) + "% matched).",
+        L.left, 68
+      );
       p.pop();
 
       // Quick takeaways card
       var cardX = L.left;
-      var cardY = L.top + 14;
+      var cardY = L.top + 8;
       var cardW = L.w;
-      var cardH = 176;
+      var cardH = 158;
       var ix = cardX + 16;
       var iy = cardY + 12;
 
@@ -163,9 +232,9 @@
       p.pop();
 
       // Bar chart
-      var chartTop = cardY + cardH + 24;
-      var chartH = L.h - (chartTop - L.top) - 20;
-      var pad = 26;
+      var chartTop = cardY + cardH + 16;
+      var chartH = L.h - (chartTop - L.top) - 12;
+      var pad = 22;
       var x0 = L.left + pad;
       var y0 = chartTop + pad;
       var cw = L.w - pad * 2;
@@ -200,9 +269,14 @@
         if (b === 'Fatal') p.fill(colFat[0], colFat[1], colFat[2], colFat[3]);
       }
 
-      var startY = y0 + 20;
-      var rowHeight = 38;
-      var barHeight = 24;
+      // Layout that adapts to container height so nothing clips
+      var legendY = chartTop + chartH - pad - 46;
+      var startY = y0 + 26;
+      var rowCount = Math.max(1, agg.items.length);
+      var availRowsH = Math.max(120, (legendY - 14) - startY);
+      var rowHeight = Math.floor(availRowsH / rowCount);
+      rowHeight = clamp(rowHeight, 26, 38);
+      var barHeight = Math.min(24, rowHeight - 12);
       var maxRate = Math.max(0.01, agg.maxRatePer100);
       var hitboxes = [];
 
@@ -313,8 +387,7 @@
         p.pop();
       }
 
-      // Severity legend at bottom
-      var legendY = startY + agg.items.length * rowHeight + 18;
+      // Severity legend at bottom (kept inside the gray box)
       var lx = x0;
       var pills = [{ k: 'PDO', c: colPDO }, { k: 'Injury', c: colInj }, { k: 'Serious', c: colSer }, { k: 'Fatal', c: colFat }];
       p.push();
