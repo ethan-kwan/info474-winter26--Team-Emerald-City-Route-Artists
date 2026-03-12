@@ -4,7 +4,6 @@
     this.steps = Array.prototype.slice.call(document.querySelectorAll(stepSelector));
     this.sectionPositions = [];
     this.sectionHeights = [];
-    this.sectionBoundaries = [];
     this.trigger = trigger || 'top';
     this.currentIndex = -1;
     this.onActive = function () { };
@@ -16,7 +15,6 @@
     this.resize = function () {
       self.sectionPositions = [];
       self.sectionHeights = [];
-      self.sectionBoundaries = [];
 
       self.steps.forEach(function (el) {
         var rect = el.getBoundingClientRect();
@@ -27,11 +25,6 @@
         self.sectionHeights.push(height);
       });
 
-      for (var i = 0; i < self.sectionPositions.length - 1; i++) {
-        var currentTop = self.sectionPositions[i];
-        var nextTop = self.sectionPositions[i + 1];
-        self.sectionBoundaries.push((currentTop + nextTop) / 2);
-      }
     };
 
     this.position = function () {
@@ -40,39 +33,13 @@
 
       var sectionIndex = 0;
 
-      for (var i = 0; i < self.sectionBoundaries.length; i++) {
-        if (triggerY >= self.sectionBoundaries[i]) {
-          sectionIndex = i + 1;
-        } else {
-          break;
-        }
+      // Activate a section once the viewport anchor has reached that section's top.
+      for (var i = 0; i < self.sectionPositions.length; i++) {
+        if (triggerY >= self.sectionPositions[i]) sectionIndex = i;
+        else break;
       }
 
       sectionIndex = Math.max(0, Math.min(self.steps.length - 1, sectionIndex));
-
-      /* Stronger hysteresis so tiny scrolls do not immediately swap stops */
-      if (self.currentIndex !== -1 && sectionIndex !== self.currentIndex) {
-        var movingForward = sectionIndex > self.currentIndex;
-        var buffer = 160;
-
-        if (movingForward) {
-          var forwardBoundary = self.sectionBoundaries[self.currentIndex];
-          if (
-            forwardBoundary !== undefined &&
-            triggerY < forwardBoundary + buffer
-          ) {
-            sectionIndex = self.currentIndex;
-          }
-        } else {
-          var backwardBoundary = self.sectionBoundaries[sectionIndex];
-          if (
-            backwardBoundary !== undefined &&
-            triggerY > backwardBoundary - buffer
-          ) {
-            sectionIndex = self.currentIndex;
-          }
-        }
-      }
 
       if (self.currentIndex !== sectionIndex) {
         self.currentIndex = sectionIndex;

@@ -552,6 +552,7 @@ function startP5() {
       openViz: false,
       openVizFor: null,
 
+      filterStreet: '',
       filterYear: 'all',
       filterSeverity: 'all',
       filterMode: 'all',
@@ -633,6 +634,7 @@ function startP5() {
     if (s.openViz !== undefined) this.state.openViz = !!s.openViz;
     if (s.openVizFor !== undefined) this.state.openVizFor = s.openVizFor;
 
+    if (s.filterStreet !== undefined) this.state.filterStreet = s.filterStreet;
     if (s.filterYear !== undefined) this.state.filterYear = s.filterYear;
     if (s.filterSeverity !== undefined) this.state.filterSeverity = s.filterSeverity;
     if (s.filterMode !== undefined) this.state.filterMode = s.filterMode;

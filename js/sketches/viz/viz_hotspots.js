@@ -58,6 +58,7 @@
 
   function makeAggKey(state) {
     return [
+      (state.filterStreet || '').trim().toLowerCase(),
       state.filterYear || 'all',
       state.filterSeverity || 'all',
       state.filterMode || 'all',
@@ -179,9 +180,7 @@
         types: {}
       };
 
-      var samplePts = [];
-      var sampleTarget = 2200;
-      var seen = 0;
+      var drawPts = [];
 
       function getCell(ix, iy) {
         var k = ix + "|" + iy;
@@ -214,9 +213,12 @@
       var sevFilter = manager.state.filterSeverity || 'all';
       var modeFilter = manager.state.filterMode || 'all';
       var timeFilter = manager.state.filterTime || 'all';
+      var streetQuery = (manager.state.filterStreet || '').trim().toLowerCase();
 
       for (var i = 0; i < all.length; i++) {
         var d = all[i];
+        var street = parsePrimaryStreet(d.location);
+        var locationText = (d.location || '').toLowerCase();
 
         if (yearFilter !== 'all') {
           if (String(d.year) !== String(yearFilter)) continue;
@@ -224,6 +226,10 @@
         if (!severityMatch(d.severity, sevFilter)) continue;
         if (!modeMatch(d, modeFilter)) continue;
         if (!timeMatch(d.hour, timeFilter)) continue;
+        if (streetQuery) {
+          var streetText = (street || '').toLowerCase();
+          if (streetText.indexOf(streetQuery) < 0 && locationText.indexOf(streetQuery) < 0) continue;
+        }
 
         summary.total += 1;
         summary.injuries += (d.injuries || 0);
@@ -236,7 +242,6 @@
         if (d.inattn) summary.inattn += 1;
         if (d.underinfl) summary.underinfl += 1;
 
-        var street = parsePrimaryStreet(d.location);
         mapInc(summary.streets, street || "(Unknown street)");
         mapInc(summary.types, d.collisionType || "(Unknown type)");
 
@@ -274,13 +279,12 @@
 
         if (cell.count > maxCount) maxCount = cell.count;
 
-        seen += 1;
-        if (samplePts.length < sampleTarget) {
-          samplePts.push({ x: d.x, y: d.y });
-        } else {
-          var r = Math.floor(Math.random() * seen);
-          if (r < sampleTarget) samplePts[r] = { x: d.x, y: d.y };
-        }
+        drawPts.push({
+          nx: nx,
+          ny: ny,
+          ix: ix,
+          iy: iy
+        });
       }
 
       var cells = [];
@@ -315,7 +319,7 @@
         maxCount: Math.max(1, maxCount),
         cells: cells,
         countsSorted: counts,
-        samplePts: samplePts,
+        drawPts: drawPts,
         _cellLookup: lookup,
         summary: summary
       };
@@ -328,6 +332,7 @@
       manager.data.hotspotYearSeriesCache = manager.data.hotspotYearSeriesCache || {};
 
       var key = [
+        (manager.state.filterStreet || '').trim().toLowerCase(),
         manager.state.filterSeverity || 'all',
         manager.state.filterMode || 'all',
         manager.state.filterTime || 'all'
@@ -341,6 +346,7 @@
       var sevFilter = manager.state.filterSeverity || 'all';
       var modeFilter = manager.state.filterMode || 'all';
       var timeFilter = manager.state.filterTime || 'all';
+      var streetQuery = (manager.state.filterStreet || '').trim().toLowerCase();
 
       var years = [2022, 2023, 2024, 2025, 2026];
       var counts = {
@@ -354,6 +360,12 @@
       for (var i = 0; i < all.length; i++) {
         var d = all[i];
         var y = Number(d.year);
+        if (streetQuery) {
+          var street = parsePrimaryStreet(d.location);
+          var locText = (d.location || '').toLowerCase();
+          var streetText = (street || '').toLowerCase();
+          if (streetText.indexOf(streetQuery) < 0 && locText.indexOf(streetQuery) < 0) continue;
+        }
 
         if (years.indexOf(y) < 0) continue;
         if (!severityMatch(d.severity, sevFilter)) continue;
@@ -563,8 +575,10 @@
 
       p.fill(90);
       p.textSize(11);
+      var streetFilterLabel = (manager.state.filterStreet || '').trim();
       var filtersLine =
         "Filters: " +
+        (streetFilterLabel ? ('Street "' + streetFilterLabel + '" · ') : '') +
         (manager.state.filterYear === 'all' ? "All years" : ("Year " + manager.state.filterYear)) + " · " +
         (manager.state.filterSeverity === 'all' ? "All severities" : manager.state.filterSeverity) + " · " +
         (manager.state.filterMode === 'all' ? "All modes" : manager.state.filterMode) + " · " +
@@ -574,6 +588,22 @@
 
       p.text("Drag to pan · Double-click to reset · Zoom with + / −", L.left, 50);
       p.pop();
+
+      if (!agg.summary || !agg.summary.total) {
+        p.push();
+        p.noStroke();
+        p.fill(231);
+        p.rect(L.map.left, L.map.top, L.map.w, L.map.h, 14);
+        p.fill(70);
+        p.textAlign(p.CENTER, p.CENTER);
+        p.textSize(18);
+        p.text("No crashes match the current filters.", L.map.left + L.map.w / 2, L.map.top + L.map.h / 2 - 8);
+        p.textSize(13);
+        p.fill(100);
+        p.text("Try a broader year/severity/mode/time or a shorter street query.", L.map.left + L.map.w / 2, L.map.top + L.map.h / 2 + 18);
+        p.pop();
+        return;
+      }
 
       p.push();
       p.noStroke();
@@ -591,77 +621,61 @@
       p.translate(L.map.left + view.tx, L.map.top + view.ty);
       p.scale(view.scale);
 
-      p.push();
-      p.stroke(255, 255, 255, 65);
-      p.strokeWeight(1);
-      for (var sp = 0; sp < agg.samplePts.length; sp++) {
-        var pt = agg.samplePts[sp];
-        var nx = (pt.x - agg.minX) / agg.dx;
-        var ny = (pt.y - agg.minY) / agg.dy;
-        nx = clamp(nx, 0, 1);
-        ny = clamp(ny, 0, 1);
-        var x = nx * L.map.w;
-        var y = (1 - ny) * L.map.h;
-        p.point(x, y);
-      }
-      p.pop();
-
       var maxCount = Math.max(1, agg.maxCount);
-      var cellW = L.map.w / agg.cols;
-      var cellH = L.map.h / agg.rows;
-      var baseR = Math.max(cellW, cellH);
-
       p.push();
       p.noStroke();
-      for (var ci = 0; ci < agg.cells.length; ci++) {
-        var c = agg.cells[ci];
+      // Keep a persistent cool baseline so low-density streets stay visible.
+      for (var sp = 0; sp < agg.drawPts.length; sp++) {
+        var pt = agg.drawPts[sp];
+        var x = pt.nx * L.map.w;
+        var y = (1 - pt.ny) * L.map.h;
+        var dotBase = 4.8 / view.scale;
+        p.fill(106, 173, 255, 132);
+        p.circle(x, y, dotBase);
+      }
 
-        var center = this._cellCenterBase(agg, L.map, c.ix, c.iy);
+      // Overlay warm highlights only on denser cells.
+      for (var sp2 = 0; sp2 < agg.drawPts.length; sp2++) {
+        var pt2 = agg.drawPts[sp2];
+        var x2 = pt2.nx * L.map.w;
+        var y2 = (1 - pt2.ny) * L.map.h;
 
-        // 1. Better scaling: a power scale provides better visual contrast
-        var tVis = Math.pow(c.count / maxCount, 0.5); 
-        tVis = clamp(tVis, 0, 1);
+        var cell = agg._cellLookup[pt2.ix + "|" + pt2.iy];
+        var localCount = cell ? cell.count : 1;
 
-        // 2. Reduce the overlapping radii
-        var rOuter = (baseR * 2.0) / view.scale; 
-        var rInner = (baseR * 1.0) / view.scale; 
+        var t = Math.log(1 + localCount) / Math.log(1 + maxCount);
+        t = clamp(t, 0, 1);
+        var hot = clamp((t - 0.62) / 0.38, 0, 1);
+        if (hot <= 0) continue;
 
-        // 3. Multi-hue color scale (Blue -> Red) for better density reading
-        var r = Math.floor(0 + (255 * tVis));
-        var g = Math.floor(140 * (1 - tVis) + 50 * tVis);
-        var b = Math.floor(255 * (1 - tVis));
+        var rr = Math.round(246 + (235 - 246) * hot);
+        var gg = Math.round(133 + (79 - 133) * hot);
+        var bb = Math.round(102 + (47 - 102) * hot);
+        var alpha = 24 + Math.floor(110 * Math.pow(hot, 1.2));
+        var dot = (4.0 + hot * 2.9) / view.scale;
+        p.fill(rr, gg, bb, alpha);
+        p.circle(x2, y2, dot);
 
-        // 4. Sharper alpha drop-off so low-density areas fade into the background
-        var aOuter = Math.floor(2 + 150 * tVis); // Lower base opacity
-        var aInner = Math.floor(10 + 220 * tVis);
-
-        p.fill(r, g, b, aOuter);
-        p.ellipse(center.x, center.y, rOuter, rOuter);
-
-        p.fill(r, g, b, aInner);
-        p.ellipse(center.x, center.y, rInner, rInner);
-
-        // --- 5. STREET SEARCH HIGHLIGHT ---
-        // Now checks the global window variable if the manager drops the state
-        var query = (manager.state.searchStreet || window.__searchStreetQuery || '').trim().toLowerCase();
-        
-        if (query.length > 2) {
-          var isMatch = false;
-          for (var s = 0; s < c.topStreets.length; s++) {
-            if (c.topStreets[s].key.toLowerCase().indexOf(query) >= 0) {
-              isMatch = true;
-              break;
-            }
-          }
-          
-          if (isMatch) {
-            p.stroke(255, 204, 0, 240); 
-            p.strokeWeight(2 / view.scale); 
-            p.noFill();
-            p.ellipse(center.x, center.y, rOuter + 6, rOuter + 6);
-            p.noStroke(); 
-          }
+        if (hot > 0.76) {
+          p.fill(255, 115, 85, Math.floor(58 * hot));
+          p.circle(x2, y2, dot * 1.75);
         }
+      }
+
+      // Highest local counts get a bright core.
+      for (var sp3 = 0; sp3 < agg.drawPts.length; sp3++) {
+        var pt3 = agg.drawPts[sp3];
+        var x3 = pt3.nx * L.map.w;
+        var y3 = (1 - pt3.ny) * L.map.h;
+        var cell = agg._cellLookup[pt3.ix + "|" + pt3.iy];
+        var localCount = cell ? cell.count : 1;
+
+        var t = Math.log(1 + localCount) / Math.log(1 + maxCount);
+        t = clamp(t, 0, 1);
+        var core = clamp((t - 0.84) / 0.16, 0, 1);
+        if (core <= 0) continue;
+        p.fill(255, 77, 57, 118);
+        p.circle(x3, y3, (3.2 + core * 1.8) / view.scale);
       }
       p.pop();
 
@@ -676,14 +690,10 @@
       // Draw Legend Gradient
       for (var px = 0; px < legW; px++) {
         var tt = px / Math.max(1, legW - 1);
-        var legVis = Math.pow(tt, 0.5);
-        
-        var lr = Math.floor(0 + (255 * legVis));
-        var lg = Math.floor(140 * (1 - legVis) + 50 * legVis);
-        var lb = Math.floor(255 * (1 - legVis));
-        var lAlpha = Math.floor(30 + 180 * legVis);
-
-        p.stroke(lr, lg, lb, lAlpha);
+        var r = Math.round(134 + (242 - 134) * tt);
+        var g = Math.round(188 + (82 - 188) * tt);
+        var b = Math.round(244 + (36 - 244) * tt);
+        p.stroke(r, g, b, 220);
         p.line(legX + px, legY, legX + px, legY + legH);
       }
 
@@ -709,9 +719,10 @@
         var contentX = cardX + innerPad;
         var contentW = cardW - innerPad * 2;
 
-        var btnReset = { x: contentX, y: cardY + 10, w: contentW, h: 30 };
-        var btnMinus = { x: contentX, y: btnReset.y + btnReset.h + 12, w: (contentW - 8) / 2, h: 30 };
-        var btnPlus = { x: btnMinus.x + btnMinus.w + 8, y: btnMinus.y, w: btnMinus.w, h: 30 };
+        var btnReset = { x: contentX, y: cardY + 10, w: contentW, h: 34 };
+        var halfW = (contentW - 12) / 2;
+        var btnMinus = { x: contentX, y: btnReset.y + 44, w: halfW, h: 30 };
+        var btnPlus = { x: btnMinus.x + btnMinus.w + 12, y: btnMinus.y, w: halfW, h: 30 };
 
         function inRect(mx, my, r) {
           return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
@@ -741,49 +752,62 @@
 
         p.push();
         p.noStroke();
-        p.fill(255, 255, 255, 238);
-        p.rect(cardX, cardY, cardW, cardH, 14);
+        p.fill(244, 246, 249, 245);
+        p.rect(cardX, cardY, cardW, cardH, 16);
+        p.fill(255, 255, 255, 228);
+        p.rect(cardX + 8, cardY + 8, cardW - 16, cardH - 16, 14);
 
-        p.fill(hoverReset ? 0 : 18, hoverReset ? 120 : 140, 255, hoverReset ? 230 : 215);
-        p.rect(btnReset.x, btnReset.y, btnReset.w, btnReset.h, 11);
+        p.fill(hoverReset ? 46 : 58, hoverReset ? 153 : 144, 240, 235);
+        p.rect(btnReset.x, btnReset.y, btnReset.w, btnReset.h, 12);
         p.fill(255);
         p.textAlign(p.CENTER, p.CENTER);
-        p.textSize(11);
+        p.textSize(12);
+        p.textStyle(p.BOLD);
         p.text("Reset view", btnReset.x + btnReset.w / 2, btnReset.y + btnReset.h / 2);
 
-        p.fill(hoverMinus ? 30 : 255, hoverMinus ? 150 : 255, hoverMinus ? 255 : 255, 220);
-        p.rect(btnMinus.x, btnMinus.y, btnMinus.w, btnMinus.h, 11);
-        p.fill(hoverMinus ? 255 : 18);
-        p.textSize(14);
-        p.text("−", btnMinus.x + btnMinus.w / 2, btnMinus.y + btnMinus.h / 2);
+        p.fill(hoverMinus ? 230 : 244);
+        p.rect(btnMinus.x, btnMinus.y, btnMinus.w, btnMinus.h, 10);
+        p.fill(hoverMinus ? 20 : 52);
+        p.textSize(18);
+        p.textStyle(p.NORMAL);
+        p.text("−", btnMinus.x + btnMinus.w / 2, btnMinus.y + btnMinus.h / 2 + 1);
 
-        p.fill(hoverPlus ? 30 : 255, hoverPlus ? 150 : 255, hoverPlus ? 255 : 255, 220);
-        p.rect(btnPlus.x, btnPlus.y, btnPlus.w, btnPlus.h, 11);
-        p.fill(hoverPlus ? 255 : 18);
-        p.text("+", btnPlus.x + btnPlus.w / 2, btnPlus.y + btnPlus.h / 2);
+        p.fill(hoverPlus ? 230 : 244);
+        p.rect(btnPlus.x, btnPlus.y, btnPlus.w, btnPlus.h, 10);
+        p.fill(hoverPlus ? 20 : 52);
+        p.text("+", btnPlus.x + btnPlus.w / 2, btnPlus.y + btnPlus.h / 2 + 1);
 
-        p.fill(90);
+        p.fill(80);
         p.textSize(10);
         p.textAlign(p.LEFT, p.TOP);
         p.text("Zoom: " + view.scale.toFixed(2) + "×", contentX, btnPlus.y + btnPlus.h + 10);
 
-        var y = btnPlus.y + btnPlus.h + 34;
+        var y = btnPlus.y + btnPlus.h + 36;
 
-        p.fill(18);
-        p.textSize(13);
-        p.text("Quick stats", contentX, y);
-        y += 24;
-
-        p.fill(60);
+        p.fill(20);
+        p.textSize(22);
+        p.textStyle(p.BOLD);
+        p.text((s.total || 0).toLocaleString(), contentX, y);
+        p.fill(90);
         p.textSize(11);
-        p.text("Total crashes: " + (s.total || 0), contentX, y);
-        y += 18;
-        p.text("Serious + Fatal: " + (s.severe || 0) + " (" + (s.severePct || 0) + "%)", contentX, y);
-        y += 28;
+        p.textStyle(p.NORMAL);
+        p.text("Total crashes", contentX + 2, y + 24);
+
+        p.fill(20);
+        p.textSize(15);
+        p.textStyle(p.BOLD);
+        p.text((s.severe || 0).toLocaleString() + " severe/fatal", contentX + 118, y + 2);
+        p.fill(90);
+        p.textSize(11);
+        p.textStyle(p.NORMAL);
+        p.text((s.severePct || 0) + "% of filtered crashes", contentX + 120, y + 22);
+        y += 54;
 
         p.fill(18);
+        p.textStyle(p.BOLD);
         p.textSize(12);
-        p.text("Crash trend (2022–2026)", contentX, y - 10);
+        p.text("Crash trend (2022–2026)", contentX, y - 8);
+        p.textStyle(p.NORMAL);
         y += 12;
 
         var chart = {
@@ -793,8 +817,11 @@
           h: 112
         };
 
+        p.noStroke();
+        p.fill(248);
+        p.rect(chart.x, chart.y, chart.w, chart.h, 10);
         p.noFill();
-        p.stroke(225);
+        p.stroke(215);
         p.strokeWeight(1);
         p.rect(chart.x, chart.y, chart.w, chart.h, 10);
 
@@ -840,7 +867,7 @@
         }
 
         p.noFill();
-        p.stroke(0, 90, 200, 220);
+        p.stroke(37, 114, 214, 230);
         p.strokeWeight(2.5);
         p.beginShape();
         for (var pi = 0; pi < pts.length; pi++) {
@@ -849,7 +876,7 @@
         p.endShape();
 
         p.noStroke();
-        p.fill(0, 90, 200, 220);
+        p.fill(37, 114, 214, 230);
         for (var pi2 = 0; pi2 < pts.length; pi2++) {
           p.circle(pts[pi2].x, pts[pi2].y, 7);
         }
@@ -869,30 +896,34 @@
 
         y = chart.y + chart.h + 34;
 
+        var streetsX = contentX + 44;
+
         p.fill(18);
-        p.textSize(12);
-        p.text("Top streets", contentX + 20, y);
-        y += 20;
+        p.textStyle(p.BOLD);
+        p.textSize(16);
+        p.text("Top streets", streetsX, y);
+        y += 24;
 
         p.fill(60);
-        p.textSize(11);
+        p.textStyle(p.NORMAL);
+        p.textSize(12);
         p.textAlign(p.LEFT, p.TOP);
 
         var topStreets = s.topStreets || [];
         for (var i2 = 0; i2 < Math.min(5, topStreets.length); i2++) {
           var it = topStreets[i2];
-          p.text((i2 + 1) + ". " + shorten(it.key, 18) + " (" + it.count + ")", contentX, y);
-          y += 15;
+          p.text((i2 + 1) + ". " + shorten(it.key, 20) + " (" + it.count + ")", streetsX, y);
+          y += 17;
         }
 
-        y += 10;
+        y += 8;
         p.fill(90);
         p.textSize(10);
         p.text(
           "Note: 2026 may look lower if the dataset only includes part of the year.",
-          contentX,
+          streetsX,
           y,
-          contentW,
+          contentW - 44,
           40
         );
 

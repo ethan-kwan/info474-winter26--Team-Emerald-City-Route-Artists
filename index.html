@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Seattle Crash Hotspots — Interactive Article</title>
+  <title>Seattle Crash Hotspots Interactive Article</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
@@ -10,15 +10,26 @@
 
 <body>
 
-<div id="graphic">
+<header class="site-header">
+  <div class="site-header-inner">
+    <div class="site-title">Seattle Crash Hotspots</div>
+    <div class="site-meta">Group 1 · INFO 474 · University of Washington · Seattle · Winter 2026</div>
+  </div>
+</header>
+
+<div id="graphic" class="article-shell">
 
   <div id="vis" class="vis-hidden">
 
     <div id="vis-canvas"></div>
 
     <div id="vis-sidebar">
-
       <div class="sidebar-scroll">
+        <div class="sidebar-title">Interactive route</div>
+        <div class="sidebar-copy">
+          Open each stop to explore the chart in more detail. Use the filters to compare years,
+          severity, travel modes, and time patterns across Seattle crash data from 2022 to 2026.
+        </div>
 
         <div class="viz-controls" id="viz-controls-stop1">
           
@@ -36,6 +47,16 @@
                           window.__sketchAPI.p5.redraw(); 
                         } 
                       }" 
+            />
+          </div>
+
+          <div class="viz-control">
+            <label for="filter-street">Search street</label>
+            <input
+              id="filter-street"
+              type="text"
+              placeholder="e.g. Rainier or Aurora"
+              autocomplete="off"
             />
           </div>
 
@@ -84,7 +105,7 @@
 
         </div>
 
-
+        <!-- Stop 2 Controls -->
         <div class="viz-controls" id="viz-controls-stop2">
 
           <div class="viz-control">
@@ -138,7 +159,7 @@
 
         </div>
 
-
+        <!-- Stop 3 Controls -->
         <div class="viz-controls" id="viz-controls-stop3">
 
           <div class="viz-control">
@@ -164,30 +185,66 @@
             </select>
           </div>
 
+        </div>
+
+        <!-- Stop 4 Controls -->
+        <div class="viz-controls" id="viz-controls-stop4">
+
           <div class="viz-control">
-            <label for="affect-metric">Metric</label>
-            <select id="affect-metric">
-              <option value="percent">Percent</option>
-              <option value="count">Count</option>
+            <label for="time-year">Year</label>
+            <select id="time-year">
+              <option value="all">All (2022–2026)</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+            </select>
+          </div>
+
+          <div class="viz-control">
+            <label for="time-severity">Severity</label>
+            <select id="time-severity">
+              <option value="all">All</option>
+              <option value="fatal">Fatal</option>
+              <option value="serious">Serious Injury</option>
+              <option value="injury">Injury</option>
+              <option value="pdo">Property Damage Only</option>
             </select>
           </div>
 
         </div>
 
       </div>
-
     </div>
   </div>
 
+  <!-- =========================================
+       SCROLL SECTIONS
+  ========================================= -->
 
   <div id="sections">
 
-    <section class="step" data-active-index="0">
-      <div class="kicker">Seattle Crash Hotspots</div>
+    <section class="step is-active" data-active-index="0">
+      <div class="kicker">Transportation safety · Seattle collision patterns · 2022 to 2026</div>
 
       <div class="big-question">
-        Where in Seattle is crash risk concentrated, and what can you do about it?
+        Seattle’s crash risk is not random.<br />
+        <span class="accent">It follows patterns in place, time, and road design.</span>
       </div>
+
+      <div class="hero-standfirst">
+        An interactive article examining where collisions cluster across Seattle,
+        what conditions surround them, who is most affected, and what these patterns
+        reveal about safer streets.
+      </div>
+
+      <div class="hero-divider"></div>
+
+      <div class="hero-byline">
+        By <strong>Hrudhai and Ethan</strong>
+      </div>
+      <div class="hero-meta">Group 1 · INFO 474 · University of Washington · Seattle · Winter 2026</div>
 
       <figure class="hero-image">
         <img
@@ -195,16 +252,100 @@
           alt="Interstate 5 and downtown Seattle."
           loading="lazy"
         />
-        <figcaption>Seattle’s roads shape how, where, and when crashes happen.</figcaption>
+        <figcaption>
+          Seattle’s roads are not just transportation corridors. They are places where traffic volume,
+          visibility, speed, and human behavior intersect.
+        </figcaption>
       </figure>
 
-      <div class="subtext">Scroll to start your route.</div>
+      <div class="article-intro-wrap">
+        <div class="article-section-label">Why this matters</div>
+
+        <div class="article-intro-block">
+          <p>
+            A crash is never just a dot on a map. It is a person crossing after work,
+            a cyclist squeezed beside traffic, a driver navigating rain and fading light,
+            or a neighborhood shaped by infrastructure decisions made years earlier.
+            When collisions repeat in the same places, they suggest something larger than chance.
+          </p>
+
+          <p>
+            This project looks across Seattle collision records from 2022 to 2026 to understand
+            <strong>where risk concentrates, what conditions are associated with it, who bears the impact,
+            and when danger peaks over the course of the day</strong>. Rather than treating crashes as
+            isolated incidents, we approach them as a citywide pattern that can be examined, compared,
+            and acted on.
+          </p>
+        </div>
+
+        <div class="article-stats">
+          <div class="article-stat">
+            <div class="article-stat-number dark">2022-2026</div>
+            <div class="article-stat-label">
+              A multi-year view makes it easier to distinguish recurring danger from one-off incidents
+            </div>
+          </div>
+
+          <div class="article-stat">
+            <div class="article-stat-number red">6 stops</div>
+            <div class="article-stat-label">
+              The article moves from hotspots to contributing conditions, impact, timing, road context, and takeaways
+            </div>
+          </div>
+
+          <div class="article-stat">
+            <div class="article-stat-number orange">4 questions</div>
+            <div class="article-stat-label">
+              Where do crashes cluster, what surrounds them, who is affected, and when does risk intensify
+            </div>
+          </div>
+
+          <div class="article-stat">
+            <div class="article-stat-number green">1 goal</div>
+            <div class="article-stat-label">
+              Make citywide crash patterns easier to understand through an article you can both read and explore
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-caption">
+          <p>
+            The route below is structured like an article, but it remains interactive. As you scroll,
+            each stop introduces a new question. When you open a visualization, you can pause the narrative
+            and explore that section in more detail using filters in the sidebar.
+          </p>
+
+          <p><strong>Scroll to begin.</strong></p>
+        </div>
+      </div>
+
+      <div class="subtext">Follow the route step by step.</div>
     </section>
 
-
     <section class="step" data-active-index="1">
-      <div class="title">Stop 1</div>
+      <div class="title">Stop 1 · Spatial concentration</div>
+      <div class="section-rule"></div>
       <div class="step-body">Where do crashes cluster citywide?</div>
+
+      <div class="step-dek">
+        <p>
+          The first question is geographic. Some crashes are spread out, but others repeatedly cluster
+          in the same corridors, intersections, and high-volume areas.
+        </p>
+      </div>
+
+      <div class="step-text">
+        <p>
+          Looking at the city as a whole helps separate isolated incidents from recurring hotspots.
+          A dense cluster can point to heavy traffic, complex road geometry, frequent turning conflict,
+          or street conditions that make mistakes more likely and more costly.
+        </p>
+
+        <p>
+          This stop asks you to read Seattle not as a uniform grid, but as a landscape of uneven risk.
+          <strong>Where collisions pile up, safety interventions may matter most.</strong>
+        </p>
+      </div>
 
       <div class="viz-cta">
         <button class="viz-toggle btn btn-primary" data-viz-toggle="1">
@@ -213,10 +354,34 @@
       </div>
     </section>
 
-
     <section class="step" data-active-index="2">
-      <div class="title">Stop 2</div>
-      <div class="step-body">What’s driving risk?</div>
+      <div class="title">Stop 2 · Contributing conditions</div>
+      <div class="section-rule"></div>
+      <div class="step-body">What conditions tend to surround crash risk?</div>
+
+      <div class="step-dek">
+        <p>
+          A hotspot alone does not explain why collisions happen. To understand risk, we also need to
+          look at the conditions recorded around them.
+        </p>
+      </div>
+
+      <div class="step-text">
+        <p>
+          Weather, lighting, and road surface conditions do not all matter in the same way. Rain may be
+          common simply because Seattle is rainy. Darkness may affect visibility differently across travel modes.
+          Road conditions may become more revealing when we isolate severe crashes.
+        </p>
+
+        <p>
+          This stop compares which contextual factors appear most often and how those patterns shift when you
+          narrow the view to different years, times of day, and crash types.
+        </p>
+      </div>
+
+      <div class="article-transition">
+        Move from where risk appears to what may be shaping it.
+      </div>
 
       <div class="viz-cta">
         <button class="viz-toggle btn btn-primary" data-viz-toggle="2">
@@ -225,10 +390,30 @@
       </div>
     </section>
 
-
     <section class="step" data-active-index="3">
-      <div class="title">Stop 3</div>
-      <div class="step-body">Who is affected?</div>
+      <div class="title">Stop 3 · Human impact</div>
+      <div class="section-rule"></div>
+      <div class="step-body">Who is affected when streets become unsafe?</div>
+
+      <div class="step-dek">
+        <p>
+          Crash counts can make safety feel abstract. This stop shifts attention back toward the people
+          who experience risk differently.
+        </p>
+      </div>
+
+      <div class="step-text">
+        <p>
+          Not every road user faces the same level of exposure or vulnerability. A person inside a car,
+          a cyclist in a painted lane, and a pedestrian crossing a busy street each encounter different
+          physical consequences even within the same environment.
+        </p>
+
+        <p>
+          This section highlights how impact is distributed across travel modes and asks whether some users
+          carry a disproportionate share of the burden.
+        </p>
+      </div>
 
       <div class="viz-cta">
         <button class="viz-toggle btn btn-primary" data-viz-toggle="3">
@@ -237,10 +422,28 @@
       </div>
     </section>
 
-
     <section class="step" data-active-index="4">
-      <div class="title">Stop 4</div>
-      <div class="step-body">When does crash risk peak across the day and week?</div>
+      <div class="title">Stop 4 · Time patterns</div>
+      <div class="section-rule"></div>
+      <div class="step-body">When does crash risk intensify across the day and week?</div>
+
+      <div class="step-dek">
+        <p>
+          Streets do not behave the same way at all hours. Commuting waves, nightlife, congestion,
+          and visibility all change the rhythm of risk.
+        </p>
+      </div>
+
+      <div class="step-text">
+        <p>
+          Looking at timing helps us move beyond static maps. A corridor that seems average across a full year
+          may still become dangerous during a narrow evening window or during recurring rush periods.
+        </p>
+
+        <p>
+          This stop is about rhythm: not just where danger exists, but <strong>when it peaks</strong>.
+        </p>
+      </div>
 
       <div class="viz-cta">
         <button class="viz-toggle btn btn-primary" data-viz-toggle="4">
@@ -249,10 +452,29 @@
       </div>
     </section>
 
-
     <section class="step" data-active-index="5">
-      <div class="title">Stop 5</div>
-      <div class="step-body">Road context + safety tools</div>
+      <div class="title">Stop 5 · Road context</div>
+      <div class="section-rule"></div>
+      <div class="step-body">What does road context suggest about safer street design?</div>
+
+      <div class="step-dek">
+        <p>
+          Once patterns are visible, the next question becomes practical. What features of the street
+          environment are associated with safer or more dangerous outcomes?
+        </p>
+      </div>
+
+      <div class="step-text">
+        <p>
+          Speed, street type, and surrounding infrastructure all shape what happens when conflict occurs.
+          A road built for higher speeds leaves less room for error. Safety tools such as traffic calming,
+          clearer crossings, and more protective design can change what would otherwise become a predictable crash site.
+        </p>
+
+        <p>
+          This stop connects the data back to road design choices and the possibility of prevention.
+        </p>
+      </div>
 
       <div class="viz-cta">
         <button class="viz-toggle btn btn-primary" data-viz-toggle="5">
@@ -261,10 +483,30 @@
       </div>
     </section>
 
-
     <section class="step" data-active-index="6">
-      <div class="title">Stop 6</div>
-      <div class="step-body">Recap, conclusion & practical advice</div>
+      <div class="title">Stop 6 · Conclusion</div>
+      <div class="section-rule"></div>
+      <div class="step-body">What should readers take away from the route?</div>
+
+      <div class="step-dek">
+        <p>
+          By the end of the route, the goal is not just to know more facts about Seattle crashes.
+          It is to see how those facts connect.
+        </p>
+      </div>
+
+      <div class="step-text">
+        <p>
+          Hotspots show where harm repeats. Contributing conditions suggest when risk intensifies.
+          Mode breakdowns reveal who is most vulnerable. Road context points toward the role of design.
+          Together, these patterns make crashes feel less random and more explainable.
+        </p>
+
+        <p>
+          A safer city is not built by reacting to every collision one at a time.
+          It is built by recognizing repeated patterns and acting before the next one happens.
+        </p>
+      </div>
 
       <div class="viz-cta">
         <button class="viz-toggle btn btn-primary" data-viz-toggle="6">
@@ -274,11 +516,37 @@
     </section>
 
     <div class="end-spacer"></div>
-
   </div>
 
 </div>
 
+<section class="references-block">
+  <div class="references-inner">
+    <div class="references-title">References and data sources</div>
+    <ol class="references-list">
+      <li>Seattle Open Data Portal traffic collision records used in the article’s citywide analysis.</li>
+      <li>Seattle streets data used for road context and speed-related comparisons.</li>
+      <li>Crosswalk-related context fields included in the merged collision dataset.</li>
+      <li>Course project developed for INFO 474 at the University of Washington in Winter 2026.</li>
+    </ol>
+    <div class="references-note">
+      This piece is designed as a scrollytelling article. Each stop combines narrative framing with an
+      interactive visualization so readers can move between guided interpretation and direct exploration.
+    </div>
+  </div>
+</section>
+
+<footer class="article-footer">
+  <div class="article-footer-inner">
+    <div class="article-footer-kicker">Group 1 · INFO 474 · University of Washington · Seattle · Winter 2026</div>
+    <div class="article-footer-text">
+      <strong>Seattle Crash Hotspots</strong> is an interactive article by <strong>Hrudhai and Ethan</strong>
+      examining how spatial clustering, environmental conditions, travel mode, timing, and road context shape crash risk in Seattle.
+    </div>
+  </div>
+</footer>
+
+<!-- p5 -->
 <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
 
 <script src="js/helpers/data_loader.js"></script>

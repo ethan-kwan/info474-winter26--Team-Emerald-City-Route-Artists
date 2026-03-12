@@ -2,23 +2,126 @@
    style.css
    ========================================= */
 
+:root {
+  --bg: #f5f1ea;
+  --paper: #fbf8f3;
+  --paper-2: #fdfbf7;
+  --ink: #171717;
+  --muted: #5d6470;
+  --line: #d7cec3;
+  --accent: #123f7a;
+  --accent-2: #c96d00;
+  --accent-3: #1f8f4e;
+  --sidebar: #fcfaf6;
+  --shadow: 0 16px 36px rgba(0, 0, 0, 0.08);
+  --vis-pad: 18px;
+  --sidebar-width: 360px;
+  --sidebar-pad: 22px;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: #eef2f6;
-  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  color: #111827;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
 }
 
 body {
   overflow-x: hidden;
 }
 
+/* =========================================
+   ARTICLE HEADER / FOOTER
+   ========================================= */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(245, 241, 234, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+
+.site-header-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.site-title {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.site-meta {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: right;
+}
+
+.article-footer {
+  background: #f1ece3;
+  border-top: 1px solid var(--line);
+  margin-top: 88px;
+}
+
+.article-footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 34px 24px 40px 24px;
+  text-align: center;
+}
+
+.article-footer-kicker {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.article-footer-text {
+  font-size: 1.2rem;
+  line-height: 1.7;
+  color: #2f3742;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.article-footer-text strong {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #111827;
+}
+
+/* =========================================
+   OVERALL LAYOUT
+   ========================================= */
+
 #graphic {
   position: relative;
   width: 100%;
+}
+
+.article-shell {
+  position: relative;
 }
 
 /* =========================================
@@ -27,14 +130,14 @@ body {
 
 #vis {
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: 60px;
+  height: calc(100vh - 60px);
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
+  gap: 18px;
   align-items: stretch;
-  padding: 14px;
+  padding: var(--vis-pad);
   box-sizing: border-box;
   z-index: 1;
   transition: opacity 220ms ease;
@@ -42,40 +145,61 @@ body {
 
 #vis-canvas {
   width: 100%;
-  height: calc(100vh - 28px);
+  height: calc(100vh - 96px);
   min-width: 0;
   min-height: 0;
-  background: #f3f4f6;
-  border-radius: 14px;
+  background: linear-gradient(180deg, #f6f2eb 0%, #f3eee5 100%);
+  border-radius: 18px;
   overflow: hidden;
   position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow);
 }
 
 #vis-canvas canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
-  border-radius: 14px;
+  border-radius: 18px;
 }
 
 #vis-sidebar {
-  width: 300px;
-  height: calc(100vh - 28px);
-  background: #f8fafc;
-  border-radius: 14px;
-  padding: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  width: var(--sidebar-width);
+  height: calc(100vh - 96px);
+  background: var(--sidebar);
+  border-radius: 18px;
+  padding: var(--sidebar-pad);
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   position: relative;
   z-index: 2;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .sidebar-scroll {
   overflow-y: auto;
   max-height: 100%;
   padding-right: 4px;
+}
+
+.sidebar-title {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.sidebar-copy {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+  color: #5d6470;
+  margin-bottom: 26px;
 }
 
 .vis-hidden {
@@ -95,7 +219,7 @@ body {
 #sections {
   position: relative;
   z-index: 3;
-  margin-top: -100vh;
+  margin-top: calc(-100vh + 60px);
   pointer-events: none;
 }
 
@@ -112,12 +236,12 @@ body.viz-open-stop6 #sections {
 
 .step {
   width: 100%;
-  min-height: 100vh;
+  min-height: 118vh;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-end;
-  padding: 34px 28px 60px 28px;
+  padding: 56px 32px 110px 32px;
   box-sizing: border-box;
   opacity: 0;
   pointer-events: none;
@@ -131,19 +255,13 @@ body.viz-open-stop6 #sections {
   transform: translateY(0);
 }
 
-.step:first-child {
-  opacity: 1;
-  pointer-events: none;
-  transform: translateY(0);
-}
-
-/* Default step content aligned to sit inside the right white panel */
+/* Default step content aligned to sit inside the right article panel area */
 .step > * {
-  width: 268px;
-  max-width: 268px;
+  width: calc(var(--sidebar-width) - (var(--sidebar-pad) * 2));
+  max-width: calc(var(--sidebar-width) - (var(--sidebar-pad) * 2));
   margin-left: auto;
-  margin-right: 14px;
-  margin-bottom: 10px;
+  margin-right: calc(var(--vis-pad) + var(--sidebar-pad) - 4px);
+  margin-bottom: 14px;
   text-align: left;
   background: none;
   border: none;
@@ -152,78 +270,285 @@ body.viz-open-stop6 #sections {
   box-sizing: border-box;
 }
 
-/* Only the actual text/button parts should ever be interactive */
+/* Only actual text/button parts interactive */
 .title,
 .step-body,
+.step-dek,
+.step-text,
+.section-rule,
 .viz-cta,
-.viz-toggle {
+.viz-toggle,
+.hero-meta,
+.hero-standfirst,
+.hero-byline,
+.hero-divider,
+.article-intro-wrap,
+.article-stats,
+.stats-caption,
+.article-section-label,
+.article-intro-block,
+.article-transition {
   pointer-events: auto;
 }
 
-/* Hero section should stay centered and give more room before Stop 1 */
+/* Hero section */
 .step[data-active-index="0"] {
   align-items: center;
-  min-height: 135vh;
+  min-height: 220vh;
   padding-top: 48px;
-  padding-bottom: 180px;
+  padding-bottom: 360px;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .step[data-active-index="0"] > * {
-  width: min(980px, 100%);
-  max-width: 980px;
+  width: min(1120px, 100%);
+  max-width: 1120px;
   margin-left: auto;
   margin-right: auto;
   text-align: center;
 }
 
-/* Give stop 1 a little extra breathing room */
 .step[data-active-index="1"] {
-  padding-top: 120px;
+  padding-top: 160px;
+}
+
+.step:not([data-active-index="0"]) {
+  padding-right: 0;
 }
 
 /* =========================================
-   TEXT STYLES
+   HERO / ARTICLE INTRO
    ========================================= */
 
 .kicker {
-  font-size: 14px;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #0070f3;
+  color: var(--accent);
 }
 
 .big-question {
-  font-size: 40px;
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  font-size: clamp(3.1rem, 6vw, 5.5rem);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  color: #111111;
+  max-width: 980px;
+  margin-top: 8px;
+}
+
+.big-question .accent {
+  color: #c24e16;
+}
+
+.hero-standfirst {
+  max-width: 820px;
+  margin-top: 20px;
+  font-size: 1.5rem;
+  line-height: 1.65;
+  color: #4f5560;
+}
+
+.hero-divider {
+  width: 170px;
+  height: 2px;
+  background: var(--line);
+  margin: 30px auto 14px auto;
+}
+
+.hero-byline {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #666d77;
+}
+
+.hero-byline strong {
+  color: var(--accent);
+}
+
+.hero-meta {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  color: #7a8089;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-top: 6px;
 }
 
 .subtext {
-  margin-top: 10px;
+  margin-top: 16px;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
-  color: #4b5563;
+  color: #57606c;
 }
 
+.article-intro-wrap {
+  max-width: 1120px;
+  margin-top: 40px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 28px;
+  padding: 42px 48px 34px 48px;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.05);
+}
+
+.article-section-label {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+
+.article-intro-block {
+  max-width: 900px;
+  margin: 0 auto 28px auto;
+  font-size: clamp(1.55rem, 2.25vw, 1.78rem);
+  line-height: 1.9;
+  color: #2c3138;
+}
+
+.article-intro-block p {
+  margin: 0 0 22px 0;
+}
+
+.article-intro-block strong {
+  font-weight: 700;
+  color: #111827;
+}
+
+.article-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+}
+
+.article-stat {
+  padding: 34px 22px 18px 22px;
+  border-right: 1px solid var(--line);
+}
+
+.article-stat:last-child {
+  border-right: none;
+}
+
+.article-stat-number {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: clamp(2.3rem, 3vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.article-stat-number.dark {
+  color: #161616;
+}
+
+.article-stat-number.red {
+  color: #dc2626;
+}
+
+.article-stat-number.orange {
+  color: #d97706;
+}
+
+.article-stat-number.green {
+  color: #16a34a;
+}
+
+.article-stat-label {
+  margin-top: 10px;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+  color: #636a74;
+}
+
+.stats-caption {
+  max-width: 860px;
+  margin: 28px auto 0 auto;
+  font-size: 1.28rem;
+  line-height: 1.85;
+  color: #555c67;
+}
+
+.stats-caption p {
+  margin: 0 0 16px 0;
+}
+
+/* =========================================
+   TEXT STYLES FOR STOPS
+   ========================================= */
+
 .title {
-  font-size: 12px;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #0070f3;
+  letter-spacing: 0.16em;
+  line-height: 1.45;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.section-rule {
+  width: 64px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 999px;
+  margin-top: 4px;
+  margin-bottom: 10px;
 }
 
 .step-body {
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.9);
+  font-size: clamp(2.2rem, 3.45vw, 2.72rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: #111111;
+  text-shadow: none;
+  overflow-wrap: anywhere;
+}
+
+.step-dek {
+  font-size: 1.22rem;
+  line-height: 1.8;
+  color: #374151;
+}
+
+.step-text {
+  font-size: 1.16rem;
+  line-height: 1.85;
+  color: #1f2937;
+}
+
+.step-text p,
+.step-dek p {
+  margin: 0 0 16px 0;
+}
+
+.step-text strong,
+.step-dek strong {
+  color: #111827;
+}
+
+.article-transition {
+  font-size: 1rem;
+  line-height: 1.85;
+  color: #6b7280;
+  font-style: italic;
 }
 
 .end-spacer {
-  height: 80vh;
+  height: 120vh;
 }
 
 /* =========================================
@@ -231,43 +556,45 @@ body.viz-open-stop6 #sections {
    ========================================= */
 
 .viz-cta {
-  margin-top: 8px;
+  margin-top: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: 268px;
-  max-width: 268px;
+  width: calc(var(--sidebar-width) - (var(--sidebar-pad) * 2));
+  max-width: calc(var(--sidebar-width) - (var(--sidebar-pad) * 2));
   pointer-events: auto;
 }
 
 .viz-toggle {
-  background: #111827;
+  background: #091b3a;
   color: white;
   border: none;
-  padding: 11px 22px;
-  border-radius: 30px;
-  font-size: 14px;
+  padding: 15px 22px;
+  border-radius: 999px;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 17px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 18px rgba(9, 27, 58, 0.18);
   margin: 0;
   width: 100%;
-  max-width: 268px;
+  max-width: 320px;
   pointer-events: auto;
 }
 
 .viz-toggle:hover {
-  background: #0070f3;
-  box-shadow: 0 6px 20px rgba(0, 112, 243, 0.3);
+  background: var(--accent);
+  box-shadow: 0 8px 22px rgba(11, 58, 117, 0.24);
   transform: translateY(-2px);
 }
 
 .viz-toggle.is-open {
-  background: #0070f3;
+  background: var(--accent);
 }
 
 .viz-note {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.85rem;
   color: #6b7280;
 }
@@ -283,24 +610,79 @@ body.viz-open-stop6 .step.is-active .viz-cta {
   pointer-events: none;
 }
 
-/* Keep stop title/body faintly visible when open */
+/* Keep step text visible enough while open */
+body.viz-open-stop1 .step.is-active .title,
+body.viz-open-stop1 .step.is-active .section-rule,
 body.viz-open-stop1 .step.is-active .step-body,
+body.viz-open-stop1 .step.is-active .step-dek,
+body.viz-open-stop1 .step.is-active .step-text,
+body.viz-open-stop2 .step.is-active .title,
+body.viz-open-stop2 .step.is-active .section-rule,
 body.viz-open-stop2 .step.is-active .step-body,
+body.viz-open-stop2 .step.is-active .step-dek,
+body.viz-open-stop2 .step.is-active .step-text,
+body.viz-open-stop3 .step.is-active .title,
+body.viz-open-stop3 .step.is-active .section-rule,
 body.viz-open-stop3 .step.is-active .step-body,
+body.viz-open-stop3 .step.is-active .step-dek,
+body.viz-open-stop3 .step.is-active .step-text,
+body.viz-open-stop4 .step.is-active .title,
+body.viz-open-stop4 .step.is-active .section-rule,
 body.viz-open-stop4 .step.is-active .step-body,
+body.viz-open-stop4 .step.is-active .step-dek,
+body.viz-open-stop4 .step.is-active .step-text,
+body.viz-open-stop5 .step.is-active .title,
+body.viz-open-stop5 .step.is-active .section-rule,
 body.viz-open-stop5 .step.is-active .step-body,
-body.viz-open-stop6 .step.is-active .step-body {
-  opacity: 0.15;
+body.viz-open-stop5 .step.is-active .step-dek,
+body.viz-open-stop5 .step.is-active .step-text,
+body.viz-open-stop6 .step.is-active .title,
+body.viz-open-stop6 .step.is-active .section-rule,
+body.viz-open-stop6 .step.is-active .step-body,
+body.viz-open-stop6 .step.is-active .step-dek,
+body.viz-open-stop6 .step.is-active .step-text {
+  opacity: 0.44;
   transition: opacity 0.3s ease;
 }
 
+body.viz-open-stop1 .step.is-active:hover .title,
+body.viz-open-stop1 .step.is-active:hover .section-rule,
 body.viz-open-stop1 .step.is-active:hover .step-body,
+body.viz-open-stop1 .step.is-active:hover .step-dek,
+body.viz-open-stop1 .step.is-active:hover .step-text,
+body.viz-open-stop2 .step.is-active:hover .title,
+body.viz-open-stop2 .step.is-active:hover .section-rule,
 body.viz-open-stop2 .step.is-active:hover .step-body,
+body.viz-open-stop2 .step.is-active:hover .step-dek,
+body.viz-open-stop2 .step.is-active:hover .step-text,
+body.viz-open-stop3 .step.is-active:hover .title,
+body.viz-open-stop3 .step.is-active:hover .section-rule,
 body.viz-open-stop3 .step.is-active:hover .step-body,
+body.viz-open-stop3 .step.is-active:hover .step-dek,
+body.viz-open-stop3 .step.is-active:hover .step-text,
+body.viz-open-stop4 .step.is-active:hover .title,
+body.viz-open-stop4 .step.is-active:hover .section-rule,
 body.viz-open-stop4 .step.is-active:hover .step-body,
+body.viz-open-stop4 .step.is-active:hover .step-dek,
+body.viz-open-stop4 .step.is-active:hover .step-text,
+body.viz-open-stop5 .step.is-active:hover .title,
+body.viz-open-stop5 .step.is-active:hover .section-rule,
 body.viz-open-stop5 .step.is-active:hover .step-body,
-body.viz-open-stop6 .step.is-active:hover .step-body {
+body.viz-open-stop5 .step.is-active:hover .step-dek,
+body.viz-open-stop5 .step.is-active:hover .step-text,
+body.viz-open-stop6 .step.is-active:hover .title,
+body.viz-open-stop6 .step.is-active:hover .section-rule,
+body.viz-open-stop6 .step.is-active:hover .step-body,
+body.viz-open-stop6 .step.is-active:hover .step-dek,
+body.viz-open-stop6 .step.is-active:hover .step-text {
   opacity: 1;
+}
+
+/* Hide route-only caption text when end stop is open so unreadable overlap disappears */
+body.viz-open-stop6 #vis-canvas .route-caption,
+body.viz-open-stop6 #vis-canvas .route-label,
+body.viz-open-stop6 #vis-canvas .road-caption {
+  opacity: 0 !important;
 }
 
 /* =========================================
@@ -310,41 +692,67 @@ body.viz-open-stop6 .step.is-active:hover .step-body {
 .viz-controls {
   display: none;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: 16px;
   margin-top: 18px;
 }
 
 .viz-control {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   text-align: left;
 }
 
 .viz-control label {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 11px;
   font-weight: 700;
   color: #6b7280;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .viz-control select {
   width: 100%;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  font-size: 12px;
+  padding: 12px 13px;
+  border-radius: 10px;
+  border: 1px solid #ddd5ca;
+  background: #f9f6f1;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
   color: #111827;
   font-weight: 600;
   outline: none;
   box-sizing: border-box;
 }
 
+.viz-control input[type="text"] {
+  width: 100%;
+  padding: 12px 13px;
+  border-radius: 10px;
+  border: 1px solid #ddd5ca;
+  background: #f9f6f1;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  color: #111827;
+  font-weight: 600;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.viz-control input[type="text"]::placeholder {
+  color: #6b7280;
+  font-weight: 500;
+}
+
 .viz-control select:focus {
-  border-color: #0070f3;
-  box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.12);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(11, 58, 117, 0.12);
+}
+
+.viz-control input[type="text"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(11, 58, 117, 0.12);
 }
 
 /* Show only the active stop's filters */
@@ -377,21 +785,66 @@ body.viz-open-stop6 #viz-controls-stop6 {
    ========================================= */
 
 .step > .hero-image {
-  max-width: 980px;
-  margin-top: 22px;
+  max-width: 1120px;
+  margin-top: 24px;
   padding: 0;
 }
 
 .hero-image img {
   width: 100%;
-  border-radius: 20px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  border-radius: 22px;
+  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.16);
 }
 
 .hero-image figcaption {
-  margin-top: 14px;
-  font-size: 0.95rem;
+  margin-top: 12px;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.92rem;
   color: #6b7280;
+}
+
+/* =========================================
+   REFERENCES BLOCK
+   ========================================= */
+
+.references-block {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.references-inner {
+  border-top: 1px solid var(--line);
+  padding-top: 30px;
+}
+
+.references-title {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+
+.references-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 1.05rem;
+  line-height: 1.95;
+  color: #404852;
+}
+
+.references-list li {
+  margin-bottom: 6px;
+}
+
+.references-note {
+  margin-top: 16px;
+  font-size: 1rem;
+  line-height: 1.85;
+  color: #666d77;
 }
 
 /* =========================================
@@ -399,8 +852,8 @@ body.viz-open-stop6 #viz-controls-stop6 {
    ========================================= */
 
 body.viz-open-stop4 #vis {
-  height: 100vh;
-  max-height: 100vh;
+  height: calc(100vh - 60px);
+  max-height: calc(100vh - 60px);
   overflow-y: auto;
   align-items: stretch;
 }
@@ -409,49 +862,80 @@ body.viz-open-stop4 #vis {
    RESPONSIVE
    ========================================= */
 
-@media (max-width: 1100px) {
+@media (max-width: 1180px) {
+  :root {
+    --vis-pad: 16px;
+    --sidebar-width: 330px;
+    --sidebar-pad: 18px;
+  }
+
   #vis {
-    grid-template-columns: 1fr 320px;
+    grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
     gap: 18px;
-    padding: 16px;
+    padding: var(--vis-pad);
   }
 
   #vis-sidebar {
-    width: 320px;
+    width: var(--sidebar-width);
+    padding: var(--sidebar-pad);
   }
 
   .step {
-    padding: 110px 24px 50px 24px;
+    padding: 110px 24px 70px 24px;
   }
 
   .step[data-active-index="0"] {
-    min-height: 128vh;
-    padding-bottom: 150px;
+    min-height: 195vh;
+    padding-bottom: 260px;
   }
 
   .step[data-active-index="1"] {
-    padding-top: 110px;
+    padding-top: 130px;
   }
 
   .step > * {
-    width: 288px;
-    max-width: 288px;
-    margin-right: 16px;
+    width: calc(var(--sidebar-width) - (var(--sidebar-pad) * 2));
+    max-width: calc(var(--sidebar-width) - (var(--sidebar-pad) * 2));
+    margin-right: calc(var(--vis-pad) + var(--sidebar-pad) - 4px);
   }
 
   .viz-cta,
   .viz-toggle {
     width: 100%;
-    max-width: 288px;
+    max-width: 300px;
+  }
+
+  .article-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .article-stat:nth-child(2) {
+    border-right: none;
+  }
+
+  .article-stat:nth-child(1),
+  .article-stat:nth-child(2) {
+    border-bottom: 1px solid var(--line);
   }
 }
 
 @media (max-width: 900px) {
+  .site-header-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .site-meta {
+    text-align: left;
+  }
+
   #vis {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 1fr) auto;
+    top: 0;
     height: auto;
     min-height: 100vh;
+    padding-top: 16px;
   }
 
   #vis-canvas {
@@ -469,30 +953,50 @@ body.viz-open-stop4 #vis {
 
   .step {
     align-items: center;
-    padding: 48px 20px;
+    padding: 56px 20px;
     min-height: auto;
+  }
+
+  .step:not([data-active-index="0"]) {
+    padding-right: 20px;
   }
 
   .step[data-active-index="0"] {
     min-height: auto;
-    padding-bottom: 80px;
+    padding-bottom: 100px;
   }
 
   .step[data-active-index="1"] {
-    padding-top: 48px;
+    padding-top: 56px;
   }
 
   .step > * {
-    width: min(700px, 100%);
-    max-width: min(700px, 100%);
+    width: min(760px, 100%);
+    max-width: min(760px, 100%);
     margin-left: auto;
     margin-right: auto;
     text-align: center;
   }
 
+  .big-question {
+    font-size: clamp(2.7rem, 10vw, 4.2rem);
+  }
+
+  .hero-standfirst {
+    font-size: 1.15rem;
+  }
+
+  .article-intro-block,
+  .stats-caption,
+  .step-dek,
+  .step-text,
+  .article-transition {
+    text-align: left;
+  }
+
   .viz-cta {
-    width: min(700px, 100%);
-    max-width: min(700px, 100%);
+    width: min(760px, 100%);
+    max-width: min(760px, 100%);
     align-items: center;
   }
 
@@ -500,5 +1004,18 @@ body.viz-open-stop4 #vis {
     width: fit-content;
     max-width: 100%;
     margin: 0 auto;
+  }
+
+  .article-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .article-stat {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .article-stat:last-child {
+    border-bottom: none;
   }
 }

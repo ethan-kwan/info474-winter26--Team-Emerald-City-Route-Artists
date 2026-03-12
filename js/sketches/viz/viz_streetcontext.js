@@ -16,8 +16,8 @@
 
   window.VizStreetContext = {
     _layout: function (p) {
-      var pad = 14;
-      var topBannerH = 100;
+      var pad = 18;
+      var topBannerH = 140;
       var left = pad;
       var top = pad + topBannerH;
       var w = p.width - pad * 2;
@@ -89,7 +89,7 @@
       p.push();
       p.noStroke();
       p.fill(255);
-      p.rect(0, 0, p.width, L.topBannerH + 12);
+      p.rect(0, 0, p.width, L.topBannerH + 18);
       p.pop();
 
       if (manager.data && manager.data.loadError) {
@@ -113,18 +113,23 @@
         return;
       }
 
-      // Title
+      // Title + subtitle
       p.push();
       p.fill(18);
       p.textAlign(p.LEFT, p.TOP);
-      p.textSize(20);
-      p.text("Stop 5 — Road context: speed limit", L.left, 14);
-      p.fill(90);
+      p.textSize(22);
+      p.textStyle(p.BOLD);
+      p.text("Stop 5 — Road context: speed limit", L.left, 18);
+      p.textStyle(p.NORMAL);
+      p.fill(110);
       p.textSize(12);
-      p.text("Collisions matched to Seattle street segments by location; chart shows count by posted speed limit.", L.left, 42);
+      p.text("Collisions matched to Seattle street segments by location. Chart: crashes per 100 segments by speed limit, stacked by severity.", L.left, 48);
+      p.fill(120);
+      p.textSize(11);
+      p.text("Showing " + agg.matched.toLocaleString() + " of " + agg.total.toLocaleString() + " collisions (" + agg.pctMatched + "% matched).", L.left, 68);
       p.pop();
 
-      // Quick takeaways card (similar format to Stop 4)
+      // Quick takeaways card
       var cardX = L.left;
       var cardY = L.top + 14;
       var cardW = L.w;
@@ -134,12 +139,12 @@
 
       p.push();
       p.noStroke();
-      p.fill(255, 255, 255, 200);
-      p.rect(cardX, cardY, cardW, cardH, 12);
+      p.fill(255, 255, 255, 190);
+      p.rect(cardX, cardY, cardW, cardH, 16);
 
       p.fill(18);
       p.textAlign(p.LEFT, p.TOP);
-      p.textSize(12.5);
+      p.textSize(14);
       p.text("Quick takeaways", ix, iy);
 
       p.fill(60);
@@ -160,7 +165,7 @@
       // Bar chart
       var chartTop = cardY + cardH + 24;
       var chartH = L.h - (chartTop - L.top) - 20;
-      var pad = 24;
+      var pad = 26;
       var x0 = L.left + pad;
       var y0 = chartTop + pad;
       var cw = L.w - pad * 2;
@@ -172,7 +177,7 @@
       p.push();
       p.noStroke();
       p.fill(235);
-      p.rect(L.left, chartTop, L.w, chartH, 14);
+      p.rect(L.left, chartTop, L.w, chartH, 16);
       p.pop();
 
       p.push();

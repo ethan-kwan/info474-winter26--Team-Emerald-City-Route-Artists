@@ -14,9 +14,9 @@
     return Math.round((n / d) * 1000) / 10;
   }
 
-  function makeKey() {
-    // No filters for now; keep an escape hatch for future controls.
-    return "all";
+  function makeKey(state) {
+    state = state || {};
+    return (state.timeYear || "all") + "|" + (state.timeSeverity || "all");
   }
 
   function dowLabel(i) {
@@ -68,8 +68,8 @@
 
   window.VizTime = {
     _layout: function (p) {
-      var pad = 12;
-      var topBannerH = 94;
+      var pad = 18;
+      var topBannerH = 92;
 
       var left = pad;
       var top = pad + topBannerH;
@@ -87,6 +87,34 @@
       if (manager.data.timeCache[key]) return manager.data.timeCache[key];
 
       var all = manager.data.collisionsAll || [];
+      var state = manager.state || {};
+      var timeYear = state.timeYear || "all";
+      var timeSeverity = state.timeSeverity || "all";
+
+      // Filter by year
+      if (timeYear && timeYear !== "all") {
+        var yearStr = String(timeYear);
+        var byYear = [];
+        for (var yi = 0; yi < all.length; yi++) {
+          if (String(all[yi].year) === yearStr) byYear.push(all[yi]);
+        }
+        all = byYear;
+      }
+
+      // Filter by severity (bucket label: Fatal, Serious, Injury, PDO)
+      if (timeSeverity && timeSeverity !== "all") {
+        var sevLabel = timeSeverity.charAt(0).toUpperCase() + timeSeverity.slice(1).toLowerCase();
+        if (sevLabel === "Pdo") sevLabel = "PDO";
+        if (sevLabel === "Serious") sevLabel = "Serious";
+        if (sevLabel === "Injury") sevLabel = "Injury";
+        if (sevLabel === "Fatal") sevLabel = "Fatal";
+        var bySev = [];
+        for (var si = 0; si < all.length; si++) {
+          if (bucketFor(all[si]) === sevLabel) bySev.push(all[si]);
+        }
+        all = bySev;
+      }
+
       if (!all.length) {
         manager.data.timeCache[key] = { ready: false };
         return manager.data.timeCache[key];
@@ -178,7 +206,7 @@
       p.push();
       p.noStroke();
       p.fill(255);
-      p.rect(0, 0, p.width, L.topBannerH + 12);
+      p.rect(0, 0, p.width, L.topBannerH + 18);
       p.pop();
 
       if (manager.data && manager.data.loadError) {
@@ -190,6 +218,12 @@
         p.pop();
         return;
       }
+
+      // Sync filter state from DOM so charts always reflect sidebar dropdowns
+      var yearEl = document.getElementById("time-year");
+      var severityEl = document.getElementById("time-severity");
+      if (yearEl && manager.state) manager.state.timeYear = yearEl.value || "all";
+      if (severityEl && manager.state) manager.state.timeSeverity = severityEl.value || "all";
 
       var agg = this._computeAgg(manager);
       if (!agg || !agg.ready) {
@@ -210,19 +244,21 @@
       p.push();
       p.fill(18);
       p.textAlign(p.LEFT, p.TOP);
-      p.textSize(20);
-      p.text("Stop 4 — When does risk peak?", L.left, 12);
-
-      p.fill(90);
+      p.textSize(22);
+      p.textStyle(p.BOLD);
+      p.text("Stop 4 — When does risk peak?", L.left, 18);
+      p.textStyle(p.NORMAL);
+      p.fill(110);
       p.textSize(12);
       p.text(
-        "Time-of-day and day-of-week patterns for all reported crashes (2022–2026).",
-        L.left, 38
+        "Time-of-day and day-of-week patterns. Bars are stacked by severity (PDO, Injury, Serious, Fatal).",
+        L.left, 48
       );
-      p.text(
-        "Bars are stacked by severity — PDO, Injury, Serious, Fatal.",
-        L.left, 54
-      );
+      p.fill(120);
+      p.textSize(11);
+      var fYear = (manager.state && manager.state.timeYear !== "all") ? ("Year " + manager.state.timeYear) : "All years";
+      var fSev = (manager.state && manager.state.timeSeverity !== "all") ? manager.state.timeSeverity : "All severities";
+      p.text("Filters: " + fYear + " · " + fSev + " — showing " + (agg.totalAll || 0).toLocaleString() + " crashes.", L.left, 68);
       p.pop();
 
       // main panel
@@ -232,22 +268,26 @@
       p.rect(L.left, L.top, L.w, L.h, 16);
       p.pop();
 
-      var pad = 14;
+      var pad = 18;
       var x0 = L.left + pad;
       var y0 = L.top + pad;
       var cw = L.w - pad * 2;
       var ch = L.h - pad * 2;
 
-      // Two columns: left = bar charts, right = "What to notice"
+      // Two chart cards side by side (flex), then "What to notice" panel on the right
       var colGap = 10;
       var leftColW = Math.floor(cw * 0.61);
       var rightColW = cw - leftColW - colGap;
 
       var cardGap = 16;
-      var topCardH = Math.min(400, Math.floor(ch * 0.54));
-      var bottomCardH = Math.min(240, Math.floor(ch * 0.32));
+      var cardW = Math.floor((leftColW - cardGap) / 2);
+      var cardH = ch;
 
-      var cardW = leftColW;
+      var card1X = x0;
+      var card1Y = y0;
+      var card2X = x0 + cardW + cardGap;
+      var card2Y = y0;
+
       var panelX = x0 + leftColW + colGap;
       var panelY = y0;
       var panelW = rightColW;
@@ -265,11 +305,8 @@
         p.pop();
       }
 
-      var card1Y = y0;
-      var card2Y = y0 + topCardH + cardGap;
-
-      drawCard(x0, card1Y, cardW, topCardH, "Crashes by hour (time of day)");
-      drawCard(x0, card2Y, cardW, bottomCardH, "Crashes by day of week");
+      drawCard(card1X, card1Y, cardW, cardH, "Crashes by hour (time of day)");
+      drawCard(card2X, card2Y, cardW, cardH, "Crashes by day of week");
       drawCard(panelX, panelY, panelW, panelH, "What to notice");
 
       var colPDO = [214, 214, 214, 255];
@@ -293,10 +330,10 @@
       // Chart 1: by hour (radial / clock)
       // -------------------------
       (function drawByHour() {
-        var chartX = x0 + chart1LeftPad;
+        var chartX = card1X + chart1LeftPad;
         var chartY = card1Y + 42;
         var chartW = cardW - chart1LeftPad * 2;
-        var chartH = topCardH - 42;
+        var chartH = cardH - 42;
         var cx = chartX + chartW / 2;
         var cy = chartY + chartH / 2;
         var innerR = 20;
@@ -386,10 +423,10 @@
       // Chart 2: by day-of-week
       // -------------------------
       (function drawByDow() {
-        var chartX = x0 + 12;
+        var chartX = card2X + 12;
         var chartY = card2Y + 40;
         var chartW = cardW - 24 - axisW;
-        var chartH = bottomCardH - 46;
+        var chartH = cardH - 46;
         var barAreaX = chartX + axisW;
 
         // y-axis
@@ -469,8 +506,9 @@
         p.pop();
       })();
 
-      // Severity legend at bottom of charts (left column)
-      var legendY = card2Y + bottomCardH + 12;
+      // Severity legend at bottom of charts (left column) — inside gray box
+      var pillH = 22;
+      var legendY = y0 + ch - pillH - 12;
       var legend = [
         { k: "PDO", c: colPDO },
         { k: "Injury", c: colInj },
@@ -482,7 +520,6 @@
       p.textSize(11);
       var lx = x0 + 12;
       var pillW = 72;
-      var pillH = 22;
       for (var li = 0; li < legend.length; li++) {
         var it = legend[li];
         p.noStroke();
@@ -602,16 +639,16 @@
         p.text("Quick takeaways", ix, iy);
 
         p.fill(60);
-        p.textSize(12);
+        p.textSize(13);
         var line1 = "Peak crash volume hour: " + hourLabel(agg.peakHour) + " (" + agg.hours[agg.peakHour].total + " crashes).";
         var line2 = "Highest severe-share hour: " + hourLabel(agg.worstSevHour) + " (" + (agg.worstSevHourPct * 100).toFixed(1) + "% severe).";
         var line3 = "Peak crash volume day: " + dowLabel(agg.peakDow) + " (" + agg.dows[agg.peakDow].total + " crashes).";
         var line4 = "The crash data shows that the highest number of crashes occurs at midnight (12 a.m.), with 5,807 crashes, indicating that late-night hours may be a particularly risky time for driving. However, while midnight has the most crashes overall, 2 a.m. has the highest proportion of severe crashes, with 8.7% classified as severe, suggesting that crashes occurring later in the night may be more dangerous. In terms of weekly patterns, Friday experiences the most crashes (4,282), which could reflect increased travel and nighttime activity at the end of the workweek. Together, these patterns suggest that late-night hours and the start of the weekend are key periods of elevated crash risk.";
 
-        p.text(line1, ix, iy + 22);
-        p.text(line2, ix, iy + 42);
-        p.text(line3, ix, iy + 62);
-        p.text(line4, ix, iy + 90, iw, ih);
+        p.text(line1, ix, iy + 26);
+        p.text(line2, ix, iy + 50);
+        p.text(line3, ix, iy + 74);
+        p.text(line4, ix, iy + 102, iw, ih);
         p.pop();
       })();
     }
