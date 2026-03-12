@@ -643,12 +643,19 @@
         var line1 = "Peak crash volume hour: " + hourLabel(agg.peakHour) + " (" + agg.hours[agg.peakHour].total + " crashes).";
         var line2 = "Highest severe-share hour: " + hourLabel(agg.worstSevHour) + " (" + (agg.worstSevHourPct * 100).toFixed(1) + "% severe).";
         var line3 = "Peak crash volume day: " + dowLabel(agg.peakDow) + " (" + agg.dows[agg.peakDow].total + " crashes).";
+        var note = "*Note: There may be reporting issues in the crash time field. The midnight (12 a.m.) count may be inflated if some crashes without a recorded time were entered as 12 a.m. This is not explicitly stated in the dataset, but inferred by our team—use discernment when interpreting this peak.";
         var line4 = "The crash data shows that the highest number of crashes occurs at midnight (12 a.m.), with 5,807 crashes, indicating that late-night hours may be a particularly risky time for driving. However, while midnight has the most crashes overall, 2 a.m. has the highest proportion of severe crashes, with 8.7% classified as severe, suggesting that crashes occurring later in the night may be more dangerous. In terms of weekly patterns, Friday experiences the most crashes (4,282), which could reflect increased travel and nighttime activity at the end of the workweek. Together, these patterns suggest that late-night hours and the start of the weekend are key periods of elevated crash risk.";
 
         p.text(line1, ix, iy + 26);
         p.text(line2, ix, iy + 50);
         p.text(line3, ix, iy + 74);
-        p.text(line4, ix, iy + 102, iw, ih);
+        p.fill(120);
+        p.textSize(10.5);
+        p.text(note, ix, iy + 96, iw, 44);
+
+        p.fill(60);
+        p.textSize(12);
+        p.text(line4, ix, iy + 144, iw, ih - 144);
         p.pop();
       })();
     }

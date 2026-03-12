@@ -157,8 +157,16 @@
 
           // Stop 5 street context (speed limit)
           if (ai === 5) {
-            if (window.VizStreetContext && window.VizStreetContext.draw) window.VizStreetContext.draw(p, manager);
-            else drawPlaceholder(p, manager, 5);
+            try {
+              if (window.VizStreetContext && typeof window.VizStreetContext.draw === 'function') {
+                window.VizStreetContext.draw(p, manager);
+              } else {
+                drawPlaceholder(p, manager, 5);
+              }
+            } catch (err) {
+              console.error('Stop 5 viz error:', err);
+              drawPlaceholder(p, manager, 5);
+            }
             return;
           }
 
